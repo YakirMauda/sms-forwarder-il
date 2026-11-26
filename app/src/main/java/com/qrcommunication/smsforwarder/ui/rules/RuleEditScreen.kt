@@ -307,10 +307,12 @@ private fun TryItBox(state: RuleEditState, vm: RuleEditViewModel, defaultName: S
         if (result != null) {
             Spacer(Modifier.height(10.dp))
             val targets = state.targets.map { it.address.trim() }.filter { it.isNotEmpty() }
+            val onlyLoops = result.matches && vm.testOnlyLoops(defaultName)
             ResultBanner(
-                success = result.matches,
-                title = stringResource(if (result.matches) R.string.test_match else R.string.test_no_match),
+                success = result.matches && !onlyLoops,
+                title = stringResource(if (result.matches && !onlyLoops) R.string.test_match else R.string.test_no_match),
                 subtitle = when {
+                    onlyLoops -> stringResource(R.string.test_reason_loop)
                     result.matches && targets.isNotEmpty() ->
                         stringResource(R.string.test_match_to, targets.joinToString(", ") { "\u2066$it\u2069" })
                     result.matches -> null

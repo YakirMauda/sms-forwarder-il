@@ -53,5 +53,11 @@ data class MatchExplanation(val senderMatches: Boolean, val contentMatches: Bool
     val matches: Boolean get() = senderMatches && contentMatches
 }
 
+/**
+ * Where an SMS goes. [loopSkipped] are targets a matching rule asked for but that were dropped
+ * because the target IS the sender (loop guard); they are logged so the user sees why.
+ */
+data class Resolution(val targets: List<ResolvedTarget>, val loopSkipped: List<ResolvedTarget> = emptyList())
+
 /** A target to send to, plus the (first, highest-priority) rule that produced it. */
 data class ResolvedTarget(val target: Target, val ruleId: Long?)

@@ -125,6 +125,13 @@ class RuleEditViewModel @Inject constructor(
         return evaluator.explain(s.toRule(defaultName).copy(enabled = true), s.testSender, s.testBody)
     }
 
+    /** True when the sample matches but every target is the sender itself (loop guard: nothing would be sent). */
+    fun testOnlyLoops(defaultName: String): Boolean {
+        val s = _state.value
+        val r = evaluator.resolve(listOf(s.toRule(defaultName).copy(enabled = true)), s.testSender, s.testBody)
+        return r.targets.isEmpty() && r.loopSkipped.isNotEmpty()
+    }
+
     fun save(defaultName: String) {
         val s = _state.value
         val rule = s.toRule(defaultName)

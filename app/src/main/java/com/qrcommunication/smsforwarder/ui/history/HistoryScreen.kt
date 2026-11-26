@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.qrcommunication.smsforwarder.R
 import com.qrcommunication.smsforwarder.data.local.entity.SmsRecord
 import com.qrcommunication.smsforwarder.data.local.entity.SmsStatus
+import com.qrcommunication.smsforwarder.service.ForwardingProcessor
 import com.qrcommunication.smsforwarder.ui.common.LtrText
 import com.qrcommunication.smsforwarder.ui.common.Pill
 import com.qrcommunication.smsforwarder.ui.common.SectionCard
@@ -146,6 +147,14 @@ private fun RecordCard(record: SmsRecord, ruleName: String?, onRetry: () -> Unit
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (record.status == SmsStatus.FILTERED.value && record.errorMessage == ForwardingProcessor.REASON_LOOP) {
+            Text(
+                stringResource(R.string.history_reason_loop),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         if (record.status == SmsStatus.FAILED.value) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                 Text(

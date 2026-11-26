@@ -98,6 +98,10 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   (`res/font/heebo.ttf`, OFL in `assets/licenses/`), brand palette (dynamic color OFF), tester shows green/red
   `ResultBanner` + reason (`RuleEvaluator.explain`), OR shown before AND (right side in RTL), both groups default to OR,
   tester title "אופציונלי – בדיקת הכלל, יש להזין SMS דמה:".
+  Round 3 (PR #9): warning card + snackbar when rules are on but master forwarding is off; loop-guard skips are now
+  visible (`RuleEvaluator.resolve` -> `Resolution.loopSkipped`, logged as FILTERED with errorMessage "loop", History
+  shows the reason, tester warns). Owner's failed test = he sent from his own number to a rule whose target is his
+  number (loop guard) and/or matched on a contact NAME (SMS only carries the number; READ_CONTACTS not requested).
 - [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
 
 ## Notes
