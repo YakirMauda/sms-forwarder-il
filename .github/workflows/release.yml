@@ -16,7 +16,14 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Manual run (Actions tab, or via the API): give a version to tag and release the
+  # chosen branch; leave it empty for a test build that is only kept as an artifact.
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 2.2.0 (creates tag v2.2.0). Empty = test build only.'
+        required: false
+        default: ''
 
 permissions:
   contents: write   # needed to create the Release and upload the APK
@@ -44,17 +51,26 @@ jobs:
 
       - name: Compute version
         id: ver
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           # versionCode must always increase, or Android refuses the update.
           # run_number grows by 1 on every run; 1000 keeps us above any old codes.
           CODE=$((1000 + ${{ github.run_number }}))
+          RELEASE=false
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            NAME="${GITHUB_REF#refs/tags/v}"
+            NAME="${GITHUB_REF#refs/tags/v}"; RELEASE=true
+          elif [[ -n "${INPUT_VERSION}" ]]; then
+            NAME="${INPUT_VERSION#v}"; RELEASE=true
+            if ! [[ "$NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::version must look like 2.2.0"; exit 1
+            fi
           else
             NAME="0.0.${CODE}-manual"
           fi
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
           echo "versionCode=$CODE versionName=$NAME"
 
       - name: Restore keystore from secret
@@ -98,14 +114,17 @@ jobs:
         run: rm -f "$RUNNER_TEMP/release.jks"
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.ver.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          # For a manual run this creates the tag on the built commit.
+          tag_name: v${{ steps.ver.outputs.name }}
+          target_commitish: ${{ github.sha }}
           files: ${{ steps.apk.outputs.file }}
           generate_release_notes: true
 
-      - name: Upload APK as build artifact (manual runs)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Upload APK as build artifact (test builds)
+        if: steps.ver.outputs.release != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.apk.outputs.file }}
