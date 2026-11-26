@@ -40,7 +40,8 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
    - `MessageSender` interface: `SmsMessageSender`, `TelegramSender`, `WebhookSender`.
    - `SimSelector` interface separate from sending (Interface Segregation).
    - `ForwardingHistoryRepository` for logging; use cases depend on interfaces (Dependency Inversion, Hilt).
-6. **Sending:** `SmsManager.divideMessage` + `sendMultipartTextMessage` (Hebrew = UCS-2, 70 chars/part);
+6. **Forwarded text = original SMS body verbatim** (owner's request 2026-11-26): no sender/date header.
+   **Sending:** `SmsManager.divideMessage` + `sendMultipartTextMessage` (Hebrew = UCS-2, 70 chars/part);
    sent/delivery PendingIntents update the Room log (status + error code). Retry failed from History.
 7. **History & Stats tab:** timestamp, sender, snippet, matched rule, target, status, error; stats today/month,
    success rate, failed count; retry button.

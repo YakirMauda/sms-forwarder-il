@@ -5,13 +5,10 @@ import com.qrcommunication.smsforwarder.service.SmsSender
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
-import org.junit.Assert.assertTrue
 
 class DestinationDispatcherTest {
 
@@ -31,26 +28,19 @@ class DestinationDispatcherTest {
     )
 
     @Test
-    fun dispatch_sms_callsSmsSenderWithFormattedMessage() = runTest {
+    fun dispatch_sms_sendsContentVerbatim() = runTest {
         dispatcher.dispatch(DestinationType.SMS, "+33699999999", payload)
 
-        val captor = argumentCaptor<String>()
-        verify(smsSender).sendSms(eq("+33699999999"), captor.capture())
-        // Le message formaté doit contenir le sender et le content
-        val formatted = captor.firstValue
-        assertTrue(formatted.contains("+33612345678"))
-        assertTrue(formatted.contains("Hello"))
+        verify(smsSender).sendSms("+33699999999", "Hello")
         verifyNoInteractions(webhookSender)
     }
 
     @Test
-    fun dispatch_smsWithAppLabel_usesNotifPrefix() = runTest {
-        val notifPayload = payload.copy(sourceLabel = "WhatsApp")
-        dispatcher.dispatch(DestinationType.SMS, "+33699999999", notifPayload)
+    fun dispatch_sms_hebrewMultilineContent_isUnchanged() = runTest {
+        val text = "קוד האימות שלך הוא: 123456\nאין למסור את הקוד לאיש"
+        dispatcher.dispatch(DestinationType.SMS, "0501234567", payload.copy(sender = "Leumi", content = text))
 
-        val captor = argumentCaptor<String>()
-        verify(smsSender).sendSms(eq("+33699999999"), captor.capture())
-        assertTrue(captor.firstValue.contains("Notif WhatsApp"))
+        verify(smsSender).sendSms("0501234567", text)
     }
 
     @Test

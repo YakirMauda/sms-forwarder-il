@@ -2,7 +2,6 @@ package com.qrcommunication.smsforwarder.service.sender
 
 import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.service.SmsSender
-import com.qrcommunication.smsforwarder.util.SmsFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,15 +20,8 @@ class DestinationDispatcher @Inject constructor(
         payload: MessagePayload,
     ) {
         when (type) {
-            DestinationType.SMS -> {
-                val formatted = SmsFormatter.format(
-                    sender = payload.sender,
-                    timestamp = payload.receivedAt,
-                    content = payload.content,
-                    appLabel = payload.sourceLabel,
-                )
-                smsSender.sendSms(destination, formatted)
-            }
+            // Owner's choice: forward the text exactly as received, no sender/date header.
+            DestinationType.SMS -> smsSender.sendSms(destination, payload.content)
             DestinationType.WEBHOOK -> webhookSender.send(destination, payload)
         }
     }
