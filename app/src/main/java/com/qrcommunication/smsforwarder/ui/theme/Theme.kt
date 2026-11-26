@@ -69,7 +69,8 @@ private val DarkColorScheme = darkColorScheme(
 @Composable
 fun SmsForwarderTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Brand palette everywhere (wallpaper-based dynamic color made the app look different on every phone).
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {

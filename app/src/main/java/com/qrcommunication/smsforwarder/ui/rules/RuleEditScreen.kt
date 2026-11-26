@@ -58,6 +58,7 @@ import com.qrcommunication.smsforwarder.domain.rules.GroupLogic
 import com.qrcommunication.smsforwarder.domain.rules.MatchOperator
 import com.qrcommunication.smsforwarder.domain.rules.RegexValidator
 import com.qrcommunication.smsforwarder.ui.common.LtrText
+import com.qrcommunication.smsforwarder.ui.common.ResultBanner
 import com.qrcommunication.smsforwarder.ui.common.SectionCard
 import com.qrcommunication.smsforwarder.ui.common.SectionTitle
 import com.qrcommunication.smsforwarder.ui.common.hintRes
@@ -156,12 +157,14 @@ private fun GroupEditor(kind: GroupKind, group: ConditionGroup, operators: List<
     SectionCard {
         SectionTitle(stringResource(if (kind == GroupKind.SENDER) R.string.group_sender else R.string.group_content))
         Spacer(Modifier.height(8.dp))
+        // OR first: in Hebrew (RTL) it sits on the right, before AND.
+        val logicOrder = listOf(GroupLogic.OR, GroupLogic.AND)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            GroupLogic.entries.forEachIndexed { i, logic ->
+            logicOrder.forEachIndexed { i, logic ->
                 SegmentedButton(
                     selected = group.logic == logic,
                     onClick = { vm.setLogic(kind, logic) },
-                    shape = SegmentedButtonDefaults.itemShape(i, GroupLogic.entries.size),
+                    shape = SegmentedButtonDefaults.itemShape(i, logicOrder.size),
                 ) {
                     Text(stringResource(if (logic == GroupLogic.AND) R.string.logic_and_long else R.string.logic_or_long))
                 }
@@ -300,13 +303,21 @@ private fun TryItBox(state: RuleEditState, vm: RuleEditViewModel, defaultName: S
             modifier = Modifier.fillMaxWidth(),
         )
         // Recomputed on every edit because `state` changes.
-        val result = vm.testMatches(defaultName)
+        val result = vm.testResult(defaultName)
         if (result != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(if (result) R.string.test_match else R.string.test_no_match),
-                fontWeight = FontWeight.Bold,
-                color = if (result) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+            Spacer(Modifier.height(10.dp))
+            val targets = state.targets.map { it.address.trim() }.filter { it.isNotEmpty() }
+            ResultBanner(
+                success = result.matches,
+                title = stringResource(if (result.matches) R.string.test_match else R.string.test_no_match),
+                subtitle = when {
+                    result.matches && targets.isNotEmpty() ->
+                        stringResource(R.string.test_match_to, targets.joinToString(", ") { "\u2066$it\u2069" })
+                    result.matches -> null
+                    !result.senderMatches && !result.contentMatches -> stringResource(R.string.test_reason_both)
+                    !result.senderMatches -> stringResource(R.string.test_reason_sender)
+                    else -> stringResource(R.string.test_reason_content)
+                },
             )
         }
     }

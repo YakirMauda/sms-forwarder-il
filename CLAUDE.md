@@ -94,7 +94,10 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
 - [~] Phase 6: owner installed v2.0.0 via Obtainium (works). Feedback round 1 (PR #7): keyboard gap in rule editor
   (fix: `adjustResize` + Save in top bar + imePadding once), FAILED->SENT race fixed. Play Protect blocks install on
   another phone when sideloaded from a browser (SMS permission + unknown developer): not a code bug, see chat.
-  Pending owner approval: green/red "Try it" result + elegant typography (Heebo) — mockup shown before implementing.
+  Round 2 (PR #8, owner approved mockup https://claude.ai/artifact/KufGhbqKNaeNjbPLgVtg9r with changes): Heebo bundled
+  (`res/font/heebo.ttf`, OFL in `assets/licenses/`), brand palette (dynamic color OFF), tester shows green/red
+  `ResultBanner` + reason (`RuleEvaluator.explain`), OR shown before AND (right side in RTL), both groups default to OR,
+  tester title "אופציונלי – בדיקת הכלל, יש להזין SMS דמה:".
 - [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
 
 ## Notes

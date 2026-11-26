@@ -31,8 +31,13 @@ class RuleEvaluator(private val registry: MatcherRegistry = MatcherRegistry.DEFA
         return result
     }
 
-    fun matches(rule: Rule, sender: String, body: String): Boolean =
-        groupMatches(rule.sender, sender, isSender = true) && groupMatches(rule.content, body, isSender = false)
+    fun matches(rule: Rule, sender: String, body: String): Boolean = explain(rule, sender, body).matches
+
+    /** Which half of the rule matched; lets the editor say *why* a sample would not be forwarded. */
+    fun explain(rule: Rule, sender: String, body: String) = MatchExplanation(
+        senderMatches = groupMatches(rule.sender, sender, isSender = true),
+        contentMatches = groupMatches(rule.content, body, isSender = false),
+    )
 
     private fun groupMatches(group: ConditionGroup, input: String, isSender: Boolean): Boolean {
         if (group.isEmpty) return true

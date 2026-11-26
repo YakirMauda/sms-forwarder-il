@@ -50,6 +50,17 @@ class RuleEvaluatorTest {
         assertFalse(evaluator.matches(rule(content = or), "x", "שלום"))
     }
 
+    @Test
+    fun explain_tellsWhichHalfFailed() {
+        val r = rule(
+            sender = group(GroupLogic.OR, MatchOperator.EQUALS to "Leumi"),
+            content = group(GroupLogic.OR, MatchOperator.CONTAINS to "קוד"),
+        )
+        assertEquals(MatchExplanation(senderMatches = true, contentMatches = false), evaluator.explain(r, "Leumi", "פרסומת"))
+        assertEquals(MatchExplanation(senderMatches = false, contentMatches = true), evaluator.explain(r, "Other", "קוד 1"))
+        assertTrue(evaluator.explain(r, "Leumi", "קוד 1").matches)
+    }
+
     // --- sender: alphanumeric IDs, English and Hebrew ---
 
     @Test

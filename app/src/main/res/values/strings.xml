@@ -59,10 +59,10 @@
     <string name="channel_telegram">Telegram</string>
     <string name="channel_webhook" translatable="false">Webhook</string>
     <string name="telegram_token_missing_hint">Set the Telegram bot token in Settings first.</string>
-    <string name="test_title">Try it</string>
+    <string name="test_title">Optional: test the rule with a sample SMS</string>
     <string name="test_body">Message text</string>
-    <string name="test_match">✓ This rule would forward this SMS</string>
-    <string name="test_no_match">✗ This rule would not forward this SMS</string>
+    <string name="test_match">The message will be forwarded</string>
+    <string name="test_no_match">The message will not be forwarded</string>
     <string name="stat_today">Forwarded today</string>
     <string name="stat_month">This month</string>
     <string name="stat_rate">Success rate</string>
@@ -122,4 +122,8 @@
     <string name="widget_counter_default" translatable="false">0 SMS</string>
     <string name="widget_status_off">OFF</string>
     <string name="widget_toggle_description">Turn forwarding on/off</string>
+    <string name="test_match_to">To %1$s</string>
+    <string name="test_reason_sender">The sender doesn\'t match</string>
+    <string name="test_reason_content">The sender matches, but the content doesn\'t</string>
+    <string name="test_reason_both">Neither the sender nor the content match</string>
 </resources>
