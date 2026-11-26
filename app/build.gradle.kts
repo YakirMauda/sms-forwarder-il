@@ -11,11 +11,13 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.qrcommunication.smsforwarder"
+        applicationId = "com.yakirmauda.smsforwarder"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.4.1"
+        // CI passes VERSION_CODE / VERSION_NAME (see .github/workflows/release.yml).
+        // Local builds fall back to these defaults.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "0.0.0-local"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables {
