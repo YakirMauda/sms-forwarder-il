@@ -5,8 +5,10 @@
 - **Always reply in Hebrew** (code, file names and technical terms stay in English).
 - **Always explain simply** what each tool/step does and why (Git, branches, PRs, Gradle, Android APIs...). Assume no prior knowledge.
 - He wants to do as little manually as possible: do the work end-to-end (branch, commit, push, PR, merge, tag) and only stop for things that truly need him.
-- He wants credit: commits are authored by him: `git config user.name "Yakir Mauda"` +
-  `git config user.email "167648116+YakirMauda@users.noreply.github.com"` (GitHub noreply, keeps his real email private).
+- He wants credit: commit **author** = him, **committer** = Claude (an environment hook requires committer
+  noreply@anthropic.com so GitHub shows commits as Verified; GitHub credits contributions to the author):
+  `git config author.name "Yakir Mauda"`, `git config author.email "167648116+YakirMauda@users.noreply.github.com"`
+  (GitHub noreply, keeps his real email private), `git config user.name Claude`, `git config user.email noreply@anthropic.com`.
   Merge PRs with **squash** so the commit on main is his.
 
 ## Goal
