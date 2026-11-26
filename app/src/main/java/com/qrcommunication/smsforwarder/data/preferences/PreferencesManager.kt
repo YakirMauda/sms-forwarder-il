@@ -16,6 +16,14 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getString(KEY_DESTINATION, "") ?: ""
         set(value) = prefs.edit().putString(KEY_DESTINATION, value).apply()
 
+    /**
+     * Optional catch-all: SMS that match no rule are sent to [destinationNumber].
+     * Off by default: the app is rule-driven.
+     */
+    var isDefaultNumberEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DEFAULT_NUMBER_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_DEFAULT_NUMBER_ENABLED, value).apply()
+
     var isForwardingEnabled: Boolean
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_FORWARDING_ENABLED, value).apply()
@@ -90,5 +98,6 @@ class PreferencesManager @Inject constructor(
         private const val KEY_RETRY_MAX_DELAY = "retry_max_delay_ms"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_TELEGRAM_TOKEN = "telegram_bot_token"
+        private const val KEY_DEFAULT_NUMBER_ENABLED = "default_number_enabled"
     }
 }

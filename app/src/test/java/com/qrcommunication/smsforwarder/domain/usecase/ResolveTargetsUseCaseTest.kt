@@ -25,36 +25,47 @@ class ResolveTargetsUseCaseTest {
     )
 
     @Test
-    fun noRules_fallsBackToDefaultNumber() = runTest {
+    fun noMatch_defaultNumberOff_forwardsNothing() = runTest {
         whenever(repo.getEnabledOrdered()).thenReturn(emptyList())
+        whenever(prefs.isDefaultNumberEnabled).thenReturn(false)
+        whenever(prefs.destinationNumber).thenReturn("0501234567")
+
+        assertTrue(useCase("Leumi", "code 1").isEmpty())
+    }
+
+    @Test
+    fun noMatch_defaultNumberOn_goesToDefaultNumber() = runTest {
+        whenever(repo.getEnabledOrdered()).thenReturn(listOf(legacyRule("Leumi", "0521112233")))
+        whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
         whenever(prefs.destinationNumber).thenReturn("0501234567")
 
         assertEquals(
             listOf(ResolvedTarget(Target(Channel.SMS, "0501234567"), null)),
-            useCase("Leumi", "code 1"),
+            useCase("Hapoalim", "code 1"),
         )
     }
 
     @Test
-    fun noRules_noDefault_forwardsNothing() = runTest {
+    fun ruleMatches_defaultNumberOn_onlyRuleTargets() = runTest {
+        whenever(repo.getEnabledOrdered()).thenReturn(listOf(legacyRule("Leumi", "0521112233")))
+        whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
+        whenever(prefs.destinationNumber).thenReturn("0501234567")
+
+        assertEquals(listOf("0521112233"), useCase("Leumi", "code 1").map { it.target.address })
+    }
+
+    @Test
+    fun defaultNumberOn_butBlank_forwardsNothing() = runTest {
         whenever(repo.getEnabledOrdered()).thenReturn(emptyList())
+        whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
         whenever(prefs.destinationNumber).thenReturn("")
 
         assertTrue(useCase("Leumi", "code 1").isEmpty())
     }
 
     @Test
-    fun rulesExistButNoneMatch_forwardsNothing_evenWithDefault() = runTest {
-        whenever(repo.getEnabledOrdered()).thenReturn(listOf(legacyRule("Leumi", "0521112233")))
-        whenever(prefs.destinationNumber).thenReturn("0501234567")
-
-        assertTrue(useCase("Hapoalim", "code 1").isEmpty())
-    }
-
-    @Test
     fun legacyRow_isConvertedAndMatches() = runTest {
         whenever(repo.getEnabledOrdered()).thenReturn(listOf(legacyRule("leumi", "0521112233")))
-        whenever(prefs.destinationNumber).thenReturn("")
 
         assertEquals(
             listOf(ResolvedTarget(Target(Channel.SMS, "0521112233"), 3L)),
