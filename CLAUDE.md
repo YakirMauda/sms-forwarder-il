@@ -102,7 +102,15 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   visible (`RuleEvaluator.resolve` -> `Resolution.loopSkipped`, logged as FILTERED with errorMessage "loop", History
   shows the reason, tester warns). Owner's failed test = he sent from his own number to a rule whose target is his
   number (loop guard) and/or matched on a contact NAME (SMS only carries the number; READ_CONTACTS not requested).
-- [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
+  Round 4 (PR #10, overnight, owner asked for 30+ scenarios): docs/SCENARIOS.md (52 scenarios) + UserScenariosTest
+  (s01-s35) + ComponentsUiTest (Compose on Robolectric, plain Application). Fixes: trailing spaces in condition
+  values ignored, "05"-style prefixes count as numbers, "00" intl prefix, target validation (`TargetValidator`, save
+  blocked + red field), SMS target cleaned before sending, legacy receivingSimSlot filter no longer drops SMS,
+  "deleted rule" label in History, editor hints (contact names not supported) + "forwards every SMS" warning.
+- [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6).
+  **Releasing (owner asked Claude to do it):** tag push is blocked (403), so `release.yml` has a `workflow_dispatch`
+  input `version` (e.g. 2.2.0): trigger it on `main` via the GitHub MCP `actions_run_trigger`; the workflow builds,
+  signs, creates tag `vX.Y.Z` + Release with the APK (softprops `tag_name`). Empty version = test build artifact only.
 
 ## Notes
 - Android SDK can't be downloaded in some sandboxes: rely on GitHub Actions for builds; keep domain logic pure Kotlin

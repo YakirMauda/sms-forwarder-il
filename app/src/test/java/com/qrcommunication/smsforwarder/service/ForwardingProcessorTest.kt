@@ -148,10 +148,11 @@ class ForwardingProcessorTest {
     }
 
     @Test
-    fun otherSimFiltered_skips() = runTest {
+    fun leftoverReceivingSimSetting_fromOldVersion_isIgnored() = runTest {
+        // v1.x had a "only forward SMS from SIM X" setting with no UI anymore; it must not drop messages.
         whenever(preferences.receivingSimSlot).thenReturn(0)
 
-        assertTrue(processor.process(sms.copy(simSlot = 1)) is ForwardOutcome.Skipped)
+        assertTrue(processor.process(sms.copy(simSlot = 1)) is ForwardOutcome.Forwarded)
     }
 
     @Test

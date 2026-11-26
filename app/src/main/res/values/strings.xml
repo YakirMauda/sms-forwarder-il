@@ -132,4 +132,10 @@
     <string name="rule_on_master_off">The rule is on, but forwarding is off</string>
     <string name="history_reason_loop">Skipped: the sender is also the target (loop guard)</string>
     <string name="test_reason_loop">The rule matches, but the target is the sender itself, so it is skipped (loop guard). Test with a different sender number.</string>
+    <string name="rule_error_target">One of the targets is not valid. Check the highlighted field.</string>
+    <string name="target_invalid">Not a valid target for this channel</string>
+    <string name="group_sender_hint">An SMS carries the sender\'s number (or a company name like Leumi), never the name saved in your contacts.</string>
+    <string name="rule_matches_all_title">This rule forwards every SMS</string>
+    <string name="rule_matches_all_text">No sender or content condition is set, so every incoming message (including private ones) will be forwarded.</string>
+    <string name="history_deleted_rule">Deleted rule</string>
 </resources>

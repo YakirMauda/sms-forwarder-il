@@ -13,7 +13,8 @@ object PhoneNumbers {
     /** True for things like "050-1234567", "+972501234567" or short codes "8888"; false for "Leumi". */
     fun isPhoneLike(raw: String): Boolean {
         val trimmed = raw.trim()
-        return trimmed.isNotEmpty() && PHONE_LIKE.matches(trimmed) && trimmed.count { it.isDigit() } >= 3
+        // 2+ digits, so a prefix like "05" or "03" still counts as a number.
+        return trimmed.isNotEmpty() && PHONE_LIKE.matches(trimmed) && trimmed.count { it.isDigit() } >= 2
     }
 
     fun normalize(raw: String): String {
@@ -25,6 +26,8 @@ object PhoneNumbers {
             digits.startsWith("00972") -> "0" + digits.removePrefix("00972")
             digits.startsWith("972") && digits.length >= 11 -> "0" + digits.removePrefix("972")
             hasPlus -> "+$digits"
+            // International "00" prefix = "+": 0012025550123 and +12025550123 are the same number.
+            digits.startsWith("00") && digits.length > 4 -> "+" + digits.removePrefix("00")
             else -> digits
         }
     }

@@ -57,6 +57,7 @@ import com.qrcommunication.smsforwarder.domain.rules.ConditionGroup
 import com.qrcommunication.smsforwarder.domain.rules.GroupLogic
 import com.qrcommunication.smsforwarder.domain.rules.MatchOperator
 import com.qrcommunication.smsforwarder.domain.rules.RegexValidator
+import com.qrcommunication.smsforwarder.domain.rules.TargetValidator
 import com.qrcommunication.smsforwarder.ui.common.LtrText
 import com.qrcommunication.smsforwarder.ui.common.ResultBanner
 import com.qrcommunication.smsforwarder.ui.common.SectionCard
@@ -124,6 +125,14 @@ fun RuleEditScreen(onDone: () -> Unit, viewModel: RuleEditViewModel = hiltViewMo
             )
             GroupEditor(GroupKind.CONTENT, state.content, MatchOperator.CONTENT, viewModel)
 
+            if (state.matchesEverything(defaultName)) {
+                ResultBanner(
+                    success = false,
+                    title = stringResource(R.string.rule_matches_all_title),
+                    subtitle = stringResource(R.string.rule_matches_all_text),
+                )
+            }
+
             TargetsEditor(state, viewModel)
 
             SectionCard {
@@ -141,6 +150,7 @@ fun RuleEditScreen(onDone: () -> Unit, viewModel: RuleEditViewModel = hiltViewMo
                         when (it) {
                             RuleEditError.NO_TARGET -> R.string.rule_error_no_target
                             RuleEditError.INVALID_REGEX -> R.string.rule_error_regex
+                            RuleEditError.INVALID_TARGET -> R.string.rule_error_target
                         },
                     ),
                     color = MaterialTheme.colorScheme.error,
@@ -156,6 +166,15 @@ fun RuleEditScreen(onDone: () -> Unit, viewModel: RuleEditViewModel = hiltViewMo
 private fun GroupEditor(kind: GroupKind, group: ConditionGroup, operators: List<MatchOperator>, vm: RuleEditViewModel) {
     SectionCard {
         SectionTitle(stringResource(if (kind == GroupKind.SENDER) R.string.group_sender else R.string.group_content))
+        if (kind == GroupKind.SENDER) {
+            // The #1 surprise: an SMS carries the sender's NUMBER, never the name saved in contacts.
+            Text(
+                stringResource(R.string.group_sender_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
         Spacer(Modifier.height(8.dp))
         // OR first: in Hebrew (RTL) it sits on the right, before AND.
         val logicOrder = listOf(GroupLogic.OR, GroupLogic.AND)
@@ -240,6 +259,12 @@ private fun TargetsEditor(state: RuleEditState, vm: RuleEditViewModel) {
                     value = target.address,
                     onValueChange = { vm.setTargetAddress(index, it) },
                     placeholder = { Text(stringResource(target.channel.hintRes()), style = LtrText) },
+                    isError = target.address.isNotBlank() && !TargetValidator.isValid(target),
+                    supportingText = {
+                        if (target.address.isNotBlank() && !TargetValidator.isValid(target)) {
+                            Text(stringResource(R.string.target_invalid))
+                        }
+                    },
                     textStyle = LtrText,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(

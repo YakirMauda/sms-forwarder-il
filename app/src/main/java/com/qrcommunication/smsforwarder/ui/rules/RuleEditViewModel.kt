@@ -18,6 +18,7 @@ import com.qrcommunication.smsforwarder.domain.rules.RegexValidator
 import com.qrcommunication.smsforwarder.domain.rules.Rule
 import com.qrcommunication.smsforwarder.domain.rules.RuleEvaluator
 import com.qrcommunication.smsforwarder.domain.rules.Target
+import com.qrcommunication.smsforwarder.domain.rules.TargetValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +29,7 @@ import javax.inject.Inject
 
 enum class GroupKind { SENDER, CONTENT }
 
-enum class RuleEditError { NO_TARGET, INVALID_REGEX }
+enum class RuleEditError { NO_TARGET, INVALID_REGEX, INVALID_TARGET }
 
 data class RuleEditState(
     val id: Long = 0,
@@ -55,6 +56,9 @@ data class RuleEditState(
         content = content.copy(conditions = content.conditions.filter { it.value.isNotBlank() }),
         targets = targets.map { it.copy(address = it.address.trim()) }.filter { it.address.isNotEmpty() },
     )
+
+    /** No condition at all: the rule would forward EVERY incoming SMS. */
+    fun matchesEverything(defaultName: String): Boolean = toRule(defaultName).let { it.sender.isEmpty && it.content.isEmpty }
 
     val hasInvalidRegex: Boolean
         get() = (sender.conditions + content.conditions).any {
@@ -138,6 +142,7 @@ class RuleEditViewModel @Inject constructor(
         val error = when {
             s.hasInvalidRegex -> RuleEditError.INVALID_REGEX
             rule.targets.isEmpty() -> RuleEditError.NO_TARGET
+            rule.targets.any { !TargetValidator.isValid(it) } -> RuleEditError.INVALID_TARGET
             else -> null
         }
         if (error != null) {

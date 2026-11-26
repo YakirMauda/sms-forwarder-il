@@ -30,7 +30,7 @@ class PhoneNumbersTest {
         assertFalse(PhoneNumbers.isPhoneLike("Leumi"))
         assertFalse(PhoneNumbers.isPhoneLike("כללית"))
         assertFalse(PhoneNumbers.isPhoneLike("Bank123"))
-        assertFalse(PhoneNumbers.isPhoneLike("12"))
+        assertFalse(PhoneNumbers.isPhoneLike("1"))
     }
 
     @Test

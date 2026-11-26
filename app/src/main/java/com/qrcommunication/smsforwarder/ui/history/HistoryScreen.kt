@@ -143,7 +143,14 @@ private fun RecordCard(record: SmsRecord, ruleName: String?, onRetry: () -> Unit
         )
         Text(record.content, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 4.dp))
         Text(
-            stringResource(R.string.history_rule, ruleName ?: stringResource(R.string.history_default_rule)),
+            stringResource(
+                R.string.history_rule,
+                when {
+                    ruleName != null -> ruleName
+                    record.ruleId != null -> stringResource(R.string.history_deleted_rule) // rule removed since
+                    else -> stringResource(R.string.history_default_rule)
+                },
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
