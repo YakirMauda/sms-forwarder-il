@@ -6,6 +6,7 @@ import android.os.Build
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.util.Log
+import com.qrcommunication.smsforwarder.domain.rules.PhoneNumbers
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,13 +58,6 @@ class LoopProtection @Inject constructor(
         return numbers
     }
 
-    private fun normalizeNumber(number: String): String {
-        val cleaned = number.replace(Regex("[^+0-9]"), "")
-        return when {
-            cleaned.startsWith("+33") -> cleaned
-            cleaned.startsWith("0033") -> "+33" + cleaned.drop(4)
-            cleaned.startsWith("0") && cleaned.length == 10 -> "+33" + cleaned.drop(1)
-            else -> cleaned
-        }
-    }
+    /** Israeli-aware: +972 / 972 / leading 0, spaces and dashes are ignored. */
+    private fun normalizeNumber(number: String): String = PhoneNumbers.normalize(number)
 }

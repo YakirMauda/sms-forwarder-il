@@ -41,23 +41,22 @@ class LoopProtectionTest {
 
     @Test
     fun isLoopDetected_normalizedMatch_returnsTrue() {
-        // 0612345678 normalizes to +33612345678
-        val result = loopProtection.isLoopDetected("0612345678", "+33612345678")
+        // Israeli: 0501234567 and +972501234567 are the same number
+        val result = loopProtection.isLoopDetected("0501234567", "+972501234567")
 
         assertTrue(result)
     }
 
     @Test
     fun isLoopDetected_localVsInternational_returnsTrue() {
-        // Both should normalize to +33612345678
-        val result = loopProtection.isLoopDetected("+33612345678", "0612345678")
+        val result = loopProtection.isLoopDetected("+972501234567", "0501234567")
 
         assertTrue(result)
     }
 
     @Test
     fun isLoopDetected_doubleZeroVsE164_returnsTrue() {
-        val result = loopProtection.isLoopDetected("0033612345678", "+33612345678")
+        val result = loopProtection.isLoopDetected("00972501234567", "+972501234567")
 
         assertTrue(result)
     }
@@ -72,7 +71,7 @@ class LoopProtectionTest {
     @Test
     fun isLoopDetected_withSpaces_normalizes() {
         // Spaces and dashes are stripped during normalization
-        val result = loopProtection.isLoopDetected("+33 6 12 34 56 78", "+33612345678")
+        val result = loopProtection.isLoopDetected("050-123 45 67", "+972501234567")
 
         assertTrue(result)
     }

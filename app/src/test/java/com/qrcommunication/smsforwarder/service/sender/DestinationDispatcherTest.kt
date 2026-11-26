@@ -1,6 +1,6 @@
 package com.qrcommunication.smsforwarder.service.sender
 
-import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
+import com.qrcommunication.smsforwarder.domain.rules.Channel
 import com.qrcommunication.smsforwarder.service.SmsSender
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -29,7 +29,7 @@ class DestinationDispatcherTest {
 
     @Test
     fun dispatch_sms_sendsContentVerbatim() = runTest {
-        dispatcher.dispatch(DestinationType.SMS, "+33699999999", payload)
+        dispatcher.dispatch(Channel.SMS, "+33699999999", payload)
 
         verify(smsSender).sendSms("+33699999999", "Hello")
         verifyNoInteractions(webhookSender)
@@ -38,7 +38,7 @@ class DestinationDispatcherTest {
     @Test
     fun dispatch_sms_hebrewMultilineContent_isUnchanged() = runTest {
         val text = "קוד האימות שלך הוא: 123456\nאין למסור את הקוד לאיש"
-        dispatcher.dispatch(DestinationType.SMS, "0501234567", payload.copy(sender = "Leumi", content = text))
+        dispatcher.dispatch(Channel.SMS, "0501234567", payload.copy(sender = "Leumi", content = text))
 
         verify(smsSender).sendSms("0501234567", text)
     }
@@ -46,7 +46,7 @@ class DestinationDispatcherTest {
     @Test
     fun dispatch_webhook_callsWebhookSender() = runTest {
         val url = "https://example.com/webhook"
-        dispatcher.dispatch(DestinationType.WEBHOOK, url, payload)
+        dispatcher.dispatch(Channel.WEBHOOK, url, payload)
 
         verify(webhookSender).send(eq(url), eq(payload))
         verifyNoInteractions(smsSender)

@@ -50,4 +50,8 @@ data class SmsRecord(
     /** Id de la ForwardingRule qui a declenche le transfert (null = fallback global). */
     @ColumnInfo(name = "rule_id")
     val ruleId: Long? = null,
+
+    /** Channel the message was forwarded on (SMS / TELEGRAM / WEBHOOK), used for retries. */
+    @ColumnInfo(name = "channel")
+    val channel: String = "SMS",
 )

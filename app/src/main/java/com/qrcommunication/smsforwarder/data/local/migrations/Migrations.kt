@@ -58,3 +58,17 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         )
     }
 }
+
+/**
+ * v2 -> v3 : new rule engine.
+ *  - forwarding_rules: sender_group / content_group / targets (JSON, nullable; null = legacy row).
+ *  - sms_records: channel each record was forwarded on.
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE forwarding_rules ADD COLUMN sender_group TEXT")
+        db.execSQL("ALTER TABLE forwarding_rules ADD COLUMN content_group TEXT")
+        db.execSQL("ALTER TABLE forwarding_rules ADD COLUMN targets TEXT")
+        db.execSQL("ALTER TABLE sms_records ADD COLUMN channel TEXT NOT NULL DEFAULT 'SMS'")
+    }
+}
