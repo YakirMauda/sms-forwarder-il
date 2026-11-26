@@ -72,3 +72,11 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("ALTER TABLE sms_records ADD COLUMN channel TEXT NOT NULL DEFAULT 'SMS'")
     }
 }
+
+/** v3 -> v4 : SMS delivery tracking + SIM the original message arrived on. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE sms_records ADD COLUMN delivered_at INTEGER")
+        db.execSQL("ALTER TABLE sms_records ADD COLUMN incoming_sim_slot INTEGER NOT NULL DEFAULT -1")
+    }
+}

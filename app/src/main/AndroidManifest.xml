@@ -52,6 +52,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Radio results (sent / delivered) for forwarded SMS. Internal only. -->
+        <receiver
+            android:name=".receiver.SmsStatusReceiver"
+            android:exported="false" />
+
         <!-- WorkManager is initialised by SmsForwarderApp (Hilt worker factory),
              so its default auto-initializer is removed. -->
         <provider

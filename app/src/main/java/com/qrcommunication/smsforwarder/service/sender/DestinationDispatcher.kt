@@ -1,25 +1,21 @@
 package com.qrcommunication.smsforwarder.service.sender
 
 import com.qrcommunication.smsforwarder.domain.rules.Channel
-import com.qrcommunication.smsforwarder.service.SmsSender
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Routes a message to the sender for its channel.
+ * Routes a message to the [MessageSender] registered for its channel (Hilt multibinding).
  * SRP: no filtering / matching here, only dispatch.
  */
 @Singleton
 class DestinationDispatcher @Inject constructor(
-    private val smsSender: SmsSender,
-    private val webhookSender: WebhookSender,
+    senders: Set<@JvmSuppressWildcards MessageSender>,
 ) {
+    private val byChannel: Map<Channel, MessageSender> = senders.associateBy { it.channel }
+
     suspend fun dispatch(channel: Channel, destination: String, payload: MessagePayload) {
-        when (channel) {
-            // Owner's choice: forward the text exactly as received, no sender/date header.
-            Channel.SMS -> smsSender.sendSms(destination, payload.content)
-            Channel.WEBHOOK -> webhookSender.send(destination, payload)
-            Channel.TELEGRAM -> throw UnsupportedOperationException("Telegram channel is not set up yet")
-        }
+        val sender = byChannel[channel] ?: throw UnsupportedOperationException("No sender for channel $channel")
+        sender.send(destination, payload)
     }
 }

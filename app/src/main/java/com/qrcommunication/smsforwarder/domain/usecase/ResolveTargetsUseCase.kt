@@ -11,9 +11,10 @@ import com.qrcommunication.smsforwarder.domain.rules.Target
 import javax.inject.Inject
 
 /**
- * Where should this SMS go?
- * - At least one enabled rule: only the targets of the rules that match (none = not forwarded).
- * - No enabled rule at all: everything goes to the default number from Settings (if set).
+ * Where should this SMS go? The app is rule-driven:
+ * - the targets of every enabled rule that matches;
+ * - if none matches and the optional "default number" is switched on in Settings,
+ *   the default number; otherwise the SMS is not forwarded.
  */
 class ResolveTargetsUseCase @Inject constructor(
     private val ruleRepository: ForwardingRuleRepository,
@@ -22,7 +23,8 @@ class ResolveTargetsUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(sender: String, body: String): List<ResolvedTarget> {
         val rules = ruleRepository.getEnabledOrdered().map { it.toDomain() }
-        if (rules.isNotEmpty()) return evaluator.resolveTargets(rules, sender, body)
+        val matched = evaluator.resolveTargets(rules, sender, body)
+        if (matched.isNotEmpty() || !preferencesManager.isDefaultNumberEnabled) return matched
 
         val fallback = preferencesManager.destinationNumber
         if (fallback.isBlank() || PhoneNumbers.same(fallback, sender)) return emptyList()

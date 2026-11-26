@@ -16,6 +16,14 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getString(KEY_DESTINATION, "") ?: ""
         set(value) = prefs.edit().putString(KEY_DESTINATION, value).apply()
 
+    /**
+     * Optional catch-all: SMS that match no rule are sent to [destinationNumber].
+     * Off by default: the app is rule-driven.
+     */
+    var isDefaultNumberEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DEFAULT_NUMBER_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_DEFAULT_NUMBER_ENABLED, value).apply()
+
     var isForwardingEnabled: Boolean
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_FORWARDING_ENABLED, value).apply()
@@ -32,6 +40,7 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getInt(KEY_SMS_COUNT, 0)
         set(value) = prefs.edit().putInt(KEY_SMS_COUNT, value).apply()
 
+    /** SIM used to forward: -1 default SIM, -2 same SIM the SMS arrived on, 0/1 a specific slot (see SimChoice). */
     var selectedSimSlot: Int
         get() = prefs.getInt(KEY_SIM_SLOT, -1)
         set(value) = prefs.edit().putInt(KEY_SIM_SLOT, value).apply()
@@ -58,6 +67,11 @@ class PreferencesManager @Inject constructor(
             .putLong(KEY_RETRY_MAX_DELAY, value.maxDelayMs)
             .apply()
 
+    /** Optional Telegram channel: token of the user's own bot (from @BotFather). Empty = off. */
+    var telegramBotToken: String
+        get() = prefs.getString(KEY_TELEGRAM_TOKEN, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_TELEGRAM_TOKEN, value.trim()).apply()
+
     var appLanguage: String
         get() = prefs.getString(KEY_APP_LANGUAGE, "system") ?: "system"
         set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
@@ -83,5 +97,7 @@ class PreferencesManager @Inject constructor(
         private const val KEY_RETRY_BACKOFF = "retry_backoff"
         private const val KEY_RETRY_MAX_DELAY = "retry_max_delay_ms"
         private const val KEY_APP_LANGUAGE = "app_language"
+        private const val KEY_TELEGRAM_TOKEN = "telegram_bot_token"
+        private const val KEY_DEFAULT_NUMBER_ENABLED = "default_number_enabled"
     }
 }
