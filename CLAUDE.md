@@ -102,6 +102,11 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   visible (`RuleEvaluator.resolve` -> `Resolution.loopSkipped`, logged as FILTERED with errorMessage "loop", History
   shows the reason, tester warns). Owner's failed test = he sent from his own number to a rule whose target is his
   number (loop guard) and/or matched on a contact NAME (SMS only carries the number; READ_CONTACTS not requested).
+  Round 4 (PR #10, overnight, owner asked for 30+ scenarios): docs/SCENARIOS.md (52 scenarios) + UserScenariosTest
+  (s01-s35) + ComponentsUiTest (Compose on Robolectric, plain Application). Fixes: trailing spaces in condition
+  values ignored, "05"-style prefixes count as numbers, "00" intl prefix, target validation (`TargetValidator`, save
+  blocked + red field), SMS target cleaned before sending, legacy receivingSimSlot filter no longer drops SMS,
+  "deleted rule" label in History, editor hints (contact names not supported) + "forwards every SMS" warning.
 - [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
 
 ## Notes

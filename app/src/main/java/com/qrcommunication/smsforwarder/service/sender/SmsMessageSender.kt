@@ -1,6 +1,7 @@
 package com.qrcommunication.smsforwarder.service.sender
 
 import com.qrcommunication.smsforwarder.domain.rules.Channel
+import com.qrcommunication.smsforwarder.domain.rules.TargetValidator
 import com.qrcommunication.smsforwarder.service.SimSelector
 import com.qrcommunication.smsforwarder.service.SmsSender
 import javax.inject.Inject
@@ -20,7 +21,7 @@ class SmsMessageSender @Inject constructor(
 
     override suspend fun send(address: String, payload: MessagePayload) {
         smsSender.sendSms(
-            destination = address,
+            destination = TargetValidator.cleanSmsNumber(address),
             message = payload.content,
             recordId = payload.recordId,
             subscriptionId = simSelector.subscriptionIdFor(payload.incomingSimSlot),

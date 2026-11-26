@@ -64,7 +64,6 @@ class ForwardingProcessor @Inject constructor(
 
     suspend fun process(sms: IncomingSms): ForwardOutcome {
         if (!preferencesManager.isForwardingEnabled) return skip("forwarding disabled")
-        if (!passesSimFilter(sms.simSlot)) return skip("SIM ${sms.simSlot} filtered out")
         if (!deduplicator.shouldProcess(sms.sender, sms.body, sms.timestamp)) return skip("duplicate")
 
         // Loop guard: the rule engine drops SMS targets equal to the sender; LoopProtection also
@@ -155,11 +154,6 @@ class ForwardingProcessor @Inject constructor(
     private fun skip(reason: String): ForwardOutcome {
         Log.d(TAG, "Skipped: $reason")
         return ForwardOutcome.Skipped(reason)
-    }
-
-    private fun passesSimFilter(simSlot: Int): Boolean {
-        val filter = preferencesManager.receivingSimSlot
-        return filter < 0 || simSlot < 0 || simSlot == filter
     }
 
     private suspend fun notifyFailure(ruleId: Long?, channel: Channel, destination: String, error: String, recordId: Long) {

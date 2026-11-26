@@ -122,4 +122,10 @@
     <string name="rule_on_master_off">החוק פעיל, אבל העברת ההודעות כבויה</string>
     <string name="history_reason_loop">דולג: השולח הוא גם היעד (הגנה מלולאה)</string>
     <string name="test_reason_loop">החוק מתאים, אבל היעד הוא השולח עצמו ולכן ההודעה מדולגת (הגנה מלולאה). בדקו עם מספר שולח אחר.</string>
+    <string name="rule_error_target">אחד היעדים לא תקין. בדקו את השדה המסומן באדום.</string>
+    <string name="target_invalid">יעד לא תקין לערוץ הזה</string>
+    <string name="group_sender_hint">הודעת SMS מגיעה עם מספר השולח (או שם של חברה כמו Leumi), אף פעם לא עם השם ששמור באנשי הקשר.</string>
+    <string name="rule_matches_all_title">החוק הזה יעביר כל SMS</string>
+    <string name="rule_matches_all_text">לא הוגדר אף תנאי שולח או תוכן, ולכן כל הודעה שתגיע (גם פרטית) תועבר.</string>
+    <string name="history_deleted_rule">חוק שנמחק</string>
 </resources>

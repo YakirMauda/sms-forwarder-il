@@ -57,6 +57,9 @@ class RuleEvaluator(private val registry: MatcherRegistry = MatcherRegistry.DEFA
     }
 
     private fun conditionMatches(condition: Condition, input: String, isSender: Boolean): Boolean {
+        // Keyboards often add a trailing space ("Leumi "); it is never meant. Regex is taken as typed.
+        val condition = if (condition.operator == MatchOperator.REGEX) condition else condition.copy(value = condition.value.trim())
+        if (condition.value.isEmpty()) return true
         val matcher = registry.get(condition.operator)
         val useNumbers = isSender && condition.operator != MatchOperator.REGEX &&
             PhoneNumbers.isPhoneLike(input) && PhoneNumbers.isPhoneLike(condition.value)

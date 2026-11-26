@@ -124,6 +124,9 @@ dependencies {
     testImplementation(libs.test.core)
     testImplementation(libs.test.ext.junit)
     testImplementation(libs.json)
+    // Compose UI tests on the JVM (Robolectric): screens are rendered and checked without a phone.
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.test.core)
     androidTestImplementation(libs.test.ext.junit)
