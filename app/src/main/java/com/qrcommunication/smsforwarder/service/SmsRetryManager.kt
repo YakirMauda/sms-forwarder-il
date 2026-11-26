@@ -31,11 +31,19 @@ class SmsRetryManager @Inject constructor(
         const val MAX_RETRIES = 3
     }
 
+    /** Automatic retry (WorkManager): gives up after [MAX_RETRIES]. */
     suspend fun retryFailedSms(record: SmsRecord): Boolean {
         if (record.retryCount >= MAX_RETRIES) {
             Log.w(TAG, "Max retries reached for record ${record.id}")
             return false
         }
+        return resend(record)
+    }
+
+    /** Manual "Retry" from History: always tries, whatever the automatic retry count. */
+    suspend fun retryNow(record: SmsRecord): Boolean = resend(record)
+
+    private suspend fun resend(record: SmsRecord): Boolean {
 
         val channel = Channel.entries.firstOrNull { it.name == record.channel } ?: Channel.SMS
         val payload = MessagePayload(

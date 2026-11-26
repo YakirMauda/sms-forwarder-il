@@ -7,8 +7,8 @@ import java.util.Locale
 /**
  * Manages app-wide locale override.
  *
- * Strategy: FR by default if the phone is in French, otherwise EN.
- * The user can override this in Settings (System / French / English).
+ * Strategy: Hebrew if the phone is in Hebrew, otherwise English.
+ * The user can override this in Settings (System / Hebrew / English).
  *
  * Usage:
  *   - In MainActivity.attachBaseContext, call LocaleManager.applyLocale(base)
@@ -17,18 +17,19 @@ import java.util.Locale
 object LocaleManager {
 
     const val LANGUAGE_SYSTEM = "system"
-    const val LANGUAGE_FRENCH = "fr"
+    /** Android's resource code for Hebrew (values-iw); "he" is mapped to it. */
+    const val LANGUAGE_HEBREW = "iw"
     const val LANGUAGE_ENGLISH = "en"
 
     /**
      * Resolve the effective locale code.
-     * - "system" → resolves to the device language (fr if device is French, en otherwise)
-     * - "fr" / "en" → explicit override
+     * - "system" → the device language (Hebrew if the device is in Hebrew, English otherwise)
+     * - "iw" / "en" → explicit override
      */
     fun resolveLanguage(preference: String): String {
         if (preference == LANGUAGE_SYSTEM) {
             val deviceLang = Locale.getDefault().language
-            return if (deviceLang == LANGUAGE_FRENCH) LANGUAGE_FRENCH else LANGUAGE_ENGLISH
+            return if (deviceLang == "iw" || deviceLang == "he") LANGUAGE_HEBREW else LANGUAGE_ENGLISH
         }
         return preference
     }
