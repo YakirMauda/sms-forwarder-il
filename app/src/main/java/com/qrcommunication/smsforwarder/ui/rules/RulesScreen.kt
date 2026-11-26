@@ -126,7 +126,7 @@ private fun RuleCard(item: RuleItem, onToggle: (Boolean) -> Unit, onEdit: () -> 
         SummaryLine(stringResource(R.string.rule_content), groupSummary(rule.content, stringResource(R.string.rule_any_content)))
         SummaryLine(
             stringResource(R.string.rule_to),
-            AnnotatedString(rule.targets.joinToString(", ") { "⁦${it.address}⁩" }),
+            AnnotatedString(rule.targets.joinToString(", ") { "\u2066${it.address}\u2069" }),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit)) }
@@ -162,7 +162,7 @@ private fun groupSummary(group: ConditionGroup, anyText: String): AnnotatedStrin
             append(ops[i])
             append(" ")
             withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)) {
-                append("⁨${c.value}⁩")
+                append("\u2068${c.value}\u2069")
             }
         }
     }
