@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -61,7 +63,7 @@ import com.qrcommunication.smsforwarder.ui.common.SectionTitle
 import com.qrcommunication.smsforwarder.ui.common.hintRes
 import com.qrcommunication.smsforwarder.ui.common.labelRes
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RuleEditScreen(onDone: () -> Unit, viewModel: RuleEditViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
@@ -78,21 +80,23 @@ fun RuleEditScreen(onDone: () -> Unit, viewModel: RuleEditViewModel = hiltViewMo
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_cancel))
                     }
                 },
+                // Save lives in the top bar so it never fights with the keyboard.
+                actions = {
+                    Button(onClick = { viewModel.save(defaultName) }, modifier = Modifier.padding(end = 8.dp)) {
+                        Text(stringResource(R.string.action_save))
+                    }
+                },
             )
-        },
-        bottomBar = {
-            Row(
-                Modifier.fillMaxWidth().padding(14.dp).imePadding(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDone) { Text(stringResource(R.string.action_cancel)) }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = { viewModel.save(defaultName) }) { Text(stringResource(R.string.action_save)) }
-            }
         },
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding() // keyboard insets counted once (activity uses adjustResize)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
@@ -239,7 +243,7 @@ private fun TargetsEditor(state: RuleEditState, vm: RuleEditViewModel) {
                         keyboardType = when (target.channel) {
                             Channel.SMS -> KeyboardType.Phone
                             Channel.WEBHOOK -> KeyboardType.Uri
-                            Channel.TELEGRAM -> KeyboardType.Number
+                            Channel.TELEGRAM -> KeyboardType.Ascii // group chat ids start with "-"
                         },
                     ),
                     modifier = Modifier.weight(1f),

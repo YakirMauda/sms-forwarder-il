@@ -95,6 +95,17 @@ class ForwardingProcessorTest {
     }
 
     @Test
+    fun radioFailureArrivedFirst_isNotOverwrittenWithSent() = runTest {
+        whenever(smsRepository.getRecordById(42L)).thenReturn(
+            SmsRecord(id = 42L, sender = "Leumi", content = "x", receivedAt = 1L, status = SmsStatus.FAILED.value, destination = "0501234567"),
+        )
+
+        processor.process(sms)
+
+        verify(smsRepository, never()).updateStatus(42L, SmsStatus.SENT, null)
+    }
+
+    @Test
     fun multipleTargets_eachGetsOwnRecordAndSend() = runTest {
         val mom = ResolvedTarget(Target(Channel.SMS, "0527654321"), ruleId = 7L)
         whenever(resolveTargets(any(), any())).thenReturn(listOf(me, mom))
