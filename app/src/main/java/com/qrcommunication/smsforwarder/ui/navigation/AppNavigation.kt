@@ -13,7 +13,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
-import com.qrcommunication.smsforwarder.ui.appwhitelist.AppWhitelistScreen
 import com.qrcommunication.smsforwarder.ui.components.PermissionHandler
 import com.qrcommunication.smsforwarder.ui.detail.DetailScreen
 import com.qrcommunication.smsforwarder.ui.diagnostics.DiagnosticsScreen
@@ -75,15 +74,10 @@ fun AppNavigation(
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToFilters = { navController.navigate(Screen.Filter.route) },
-                onNavigateToAppWhitelist = { navController.navigate(Screen.AppWhitelist.route) },
                 onNavigateToRules = { navController.navigate(Screen.Rules.route) },
                 onNavigateToDiagnostics = { navController.navigate(Screen.Diagnostics.route) },
                 onNavigateToNotifications = { navController.navigate(Screen.NotificationCenter.route) },
             )
-        }
-
-        composable(Screen.AppWhitelist.route) {
-            AppWhitelistScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.History.route) {

@@ -3,11 +3,19 @@ package com.qrcommunication.smsforwarder
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.os.Build
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
-class SmsForwarderApp : Application() {
+class SmsForwarderApp : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    /** Lets WorkManager create @HiltWorker workers (default initializer is removed in the manifest). */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     companion object {
         const val CHANNEL_ID_FORWARDING = "sms_forwarding_channel"

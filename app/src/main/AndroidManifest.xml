@@ -8,18 +8,12 @@
     <!-- SMS Permissions -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
-    <!-- Boot & Service Permissions -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Internet (pour webhooks de transfert vers URL) -->
+    <!-- Internet (optional webhook / Telegram channels) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -47,7 +41,7 @@
             </intent-filter>
         </activity>
 
-        <!-- SMS Receiver -->
+        <!-- SMS Receiver: the only entry point. Event-driven, no foreground service. -->
         <receiver
             android:name=".receiver.SmsReceiver"
             android:enabled="true"
@@ -58,34 +52,18 @@
             </intent-filter>
         </receiver>
 
-        <!-- Boot Receiver -->
-        <receiver
-            android:name=".receiver.BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Foreground Service -->
-        <service
-            android:name=".service.SmsForwardService"
-            android:enabled="true"
+        <!-- WorkManager is initialised by SmsForwarderApp (Hilt worker factory),
+             so its default auto-initializer is removed. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
-
-        <!-- Notification Listener for RCS messages -->
-        <service
-            android:name=".service.NotificationInterceptorService"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- Widget Receiver -->
         <receiver

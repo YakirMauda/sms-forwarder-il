@@ -5,7 +5,9 @@
 - **Always reply in Hebrew** (code, file names and technical terms stay in English).
 - **Always explain simply** what each tool/step does and why (Git, branches, PRs, Gradle, Android APIs...). Assume no prior knowledge.
 - He wants to do as little manually as possible: do the work end-to-end (branch, commit, push, PR, merge, tag) and only stop for things that truly need him.
-- He wants credit: commits should be authored by him. TODO: get his GitHub noreply email (Settings > Emails) and set `git config user.email`.
+- He wants credit: commits are authored by him: `git config user.name "Yakir Mauda"` +
+  `git config user.email "167648116+YakirMauda@users.noreply.github.com"` (GitHub noreply, keeps his real email private).
+  Merge PRs with **squash** so the commit on main is his.
 
 ## Goal
 Personal Android app that auto-forwards selected incoming SMS (OTP/verification codes for family bureaucracy:
@@ -65,8 +67,14 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
 
 ## Roadmap / status
 - [x] Phase 0: import repo, keystore, secrets
-- [~] Phase 1: CI/CD — PR #1 green, NOT merged yet. Next: merge, tag v1.5.0, confirm Release + APK appear.
-- [ ] Phase 2: strip foreground service / boot / RCS; receiver + goAsync + WorkManager retry
+- [~] Phase 1: CI/CD — PR #1 squash-merged. Tag v1.5.0 NOT pushed yet: the cloud sandbox can only push branch
+  `ci/release-pipeline` (tag push = 403), so the owner creates the tag via GitHub web UI (Releases > Draft new release).
+  Then confirm Release + APK appear.
+- [~] Phase 2: strip foreground service / boot / RCS; receiver + goAsync + WorkManager retry (PR open from `ci/release-pipeline`).
+  `SmsReceiver` -> `ForwardingProcessor` (send timeout 7s) -> on failure `RetryScheduler` -> `ForwardRetryWorker`
+  (HiltWorker, delays from user's `RetryPolicy`). READ_SMS, NotificationListener, AppWhitelist screen removed.
+  Leftovers for later phases: unused strings of removed screens; `LoopProtection` still normalizes +33 (Phase 3);
+  `SmsRetryManager.MAX_RETRIES` also caps manual retry from History after auto-retries (revisit in Phase 4/5).
 - [ ] Phase 3: new rule engine (Room entities + migrations + JVM unit tests)
 - [ ] Phase 4: multipart sending, status tracking, dual-SIM, channels
 - [ ] Phase 5: Compose UI (Rules, History & Stats, Settings), onboarding, Hebrew/RTL

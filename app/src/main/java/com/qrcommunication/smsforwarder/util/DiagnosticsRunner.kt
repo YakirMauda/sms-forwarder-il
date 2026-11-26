@@ -39,7 +39,6 @@ class DiagnosticsRunner @Inject constructor(
 
     fun runAll(): List<DiagnosticCheck> = buildList {
         addAll(permissionChecks())
-        add(notificationListenerCheck())
         add(batteryOptimizationCheck())
         add(networkCheck())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -51,7 +50,6 @@ class DiagnosticsRunner @Inject constructor(
         val perms = mapOf(
             Manifest.permission.RECEIVE_SMS to "Reception SMS",
             Manifest.permission.SEND_SMS to "Envoi SMS",
-            Manifest.permission.READ_SMS to "Lecture SMS",
             Manifest.permission.READ_PHONE_STATE to context.getString(R.string.diag_phone_state),
         )
         return perms.map { (perm, label) ->
@@ -81,22 +79,6 @@ class DiagnosticsRunner @Inject constructor(
         )
     }
 
-    private fun notificationListenerCheck(): DiagnosticCheck {
-        val enabled = isNotificationListenerEnabled()
-        return DiagnosticCheck(
-            id = "notification_listener",
-            title = context.getString(R.string.diagnostics_notification_access_rcs),
-            description = if (enabled) {
-                context.getString(R.string.diag_notif_listener_active)
-            } else {
-                context.getString(R.string.diag_notif_listener_inactive)
-            },
-            severity = if (enabled) CheckSeverity.OK else CheckSeverity.WARNING,
-            fixIntent = if (enabled) null else Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
-            fixLabel = if (enabled) null else context.getString(R.string.diag_action_enable),
-        )
-    }
-
     private fun batteryOptimizationCheck(): DiagnosticCheck {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         val ignoring = pm?.isIgnoringBatteryOptimizations(context.packageName) == true
@@ -108,9 +90,9 @@ class DiagnosticsRunner @Inject constructor(
             id = "battery_optimization",
             title = context.getString(R.string.diag_battery_optimization),
             description = if (ignoring) {
-                "Exception accordee - le service ne sera pas suspendu"
+                "Exception accordee - les tentatives de renvoi ne seront pas retardees"
             } else {
-                "Service susceptible d'etre suspendu en arriere-plan par Android"
+                "Android peut retarder les tentatives de renvoi en arriere-plan"
             },
             severity = if (ignoring) CheckSeverity.OK else CheckSeverity.WARNING,
             fixIntent = if (ignoring) null else fixIntent,
@@ -134,13 +116,6 @@ class DiagnosticsRunner @Inject constructor(
             },
             severity = if (online) CheckSeverity.OK else CheckSeverity.INFO,
         )
-    }
-
-    private fun isNotificationListenerEnabled(): Boolean {
-        val enabledListeners = Settings.Secure.getString(
-            context.contentResolver, "enabled_notification_listeners",
-        )
-        return enabledListeners?.contains(context.packageName) == true
     }
 
     private fun appSettingsIntent(): Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {

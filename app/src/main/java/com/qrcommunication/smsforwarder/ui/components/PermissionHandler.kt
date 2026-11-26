@@ -40,7 +40,6 @@ fun PermissionHandler(
 ) {
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
-    var showNotificationAccessDialog by remember { mutableStateOf(false) }
     var permissionRequestCompleted by remember { mutableStateOf(false) }
     var runtimePermissionsGranted by remember { mutableStateOf(false) }
 
@@ -48,7 +47,6 @@ fun PermissionHandler(
         buildList {
             add(Manifest.permission.RECEIVE_SMS)
             add(Manifest.permission.SEND_SMS)
-            add(Manifest.permission.READ_SMS)
             add(Manifest.permission.READ_PHONE_STATE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
@@ -69,12 +67,7 @@ fun PermissionHandler(
         val allAccepted = results.values.all { it }
         if (allAccepted) {
             runtimePermissionsGranted = true
-            // Verifier l'acces aux notifications pour RCS
-            if (!isNotificationListenerEnabled(context)) {
-                showNotificationAccessDialog = true
-            } else {
-                onAllPermissionsGranted()
-            }
+            onAllPermissionsGranted()
         } else {
             showRationaleDialog = true
         }
@@ -83,11 +76,7 @@ fun PermissionHandler(
     LaunchedEffect(Unit) {
         if (allGranted) {
             runtimePermissionsGranted = true
-            if (!isNotificationListenerEnabled(context)) {
-                showNotificationAccessDialog = true
-            } else {
-                onAllPermissionsGranted()
-            }
+            onAllPermissionsGranted()
         } else {
             permissionLauncher.launch(requiredPermissions)
         }
@@ -105,79 +94,6 @@ fun PermissionHandler(
             }
         )
     }
-
-    if (showNotificationAccessDialog) {
-        NotificationAccessDialog(
-            onOpenSettings = {
-                showNotificationAccessDialog = false
-                openNotificationListenerSettings(context)
-                onAllPermissionsGranted()
-            },
-            onSkip = {
-                showNotificationAccessDialog = false
-                onAllPermissionsGranted()
-            }
-        )
-    }
-}
-
-private fun isNotificationListenerEnabled(context: Context): Boolean {
-    val enabledListeners = Settings.Secure.getString(
-        context.contentResolver, "enabled_notification_listeners"
-    )
-    return enabledListeners?.contains(context.packageName) == true
-}
-
-private fun openNotificationListenerSettings(context: Context) {
-    val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS").apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
-    context.startActivity(intent)
-}
-
-@Composable
-private fun NotificationAccessDialog(
-    onOpenSettings: () -> Unit,
-    onSkip: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onSkip,
-        title = {
-            Text(
-                text = stringResource(R.string.permission_notification_access_card_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.permission_notification_access_card_desc),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.permission_notification_access_warning),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            FilledTonalButton(onClick = onOpenSettings) {
-                Text(stringResource(R.string.permission_enable))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onSkip) {
-                Text(stringResource(R.string.permission_later))
-            }
-        }
-    )
 }
 
 @Composable
