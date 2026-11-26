@@ -1,7 +1,10 @@
 package com.qrcommunication.smsforwarder.ui.navigation
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -55,7 +58,7 @@ private val TABS = listOf(
 )
 
 /** App shell: permission gate -> 3 tabs (Rules / History / Settings) + full-screen rule editor. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AppNavigation() = PermissionGate {
     val context = LocalContext.current
@@ -106,7 +109,8 @@ fun AppNavigation() = PermissionGate {
                         }
                     },
                 ) { padding ->
-                    Column(Modifier.fillMaxSize().padding(padding)) {
+                    // consume what the Scaffold already padded, then add only the rest of the keyboard height
+                    Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
                         if (!batteryExempt) BatteryBanner(onFix = { showBatteryDialog = true })
                         when (tab.route) {
                             Routes.RULES -> RulesScreen(

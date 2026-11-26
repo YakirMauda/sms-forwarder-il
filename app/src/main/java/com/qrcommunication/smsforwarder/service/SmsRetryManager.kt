@@ -44,7 +44,6 @@ class SmsRetryManager @Inject constructor(
     suspend fun retryNow(record: SmsRecord): Boolean = resend(record)
 
     private suspend fun resend(record: SmsRecord): Boolean {
-
         val channel = Channel.entries.firstOrNull { it.name == record.channel } ?: Channel.SMS
         val payload = MessagePayload(
             sender = record.sender,
@@ -55,16 +54,17 @@ class SmsRetryManager @Inject constructor(
             incomingSimSlot = record.incomingSimSlot,
         )
 
+        // PENDING while the attempt is in flight, so a fast radio failure (SmsStatusHandler)
+        // is not overwritten with SENT afterwards.
+        val attempt = record.copy(status = SmsStatus.PENDING.value, retryCount = record.retryCount + 1, errorMessage = null)
+        smsRepository.updateRecord(attempt)
+
         return try {
             dispatcher.dispatch(channel, record.destination, payload)
-            smsRepository.updateRecord(
-                record.copy(
-                    status = SmsStatus.SENT.value,
-                    forwardedAt = System.currentTimeMillis(),
-                    retryCount = record.retryCount + 1,
-                    errorMessage = null,
-                ),
-            )
+            val current = smsRepository.getRecordById(record.id)
+            if (current == null || current.status == SmsStatus.PENDING.value) {
+                smsRepository.updateRecord(attempt.copy(status = SmsStatus.SENT.value, forwardedAt = System.currentTimeMillis()))
+            }
             preferencesManager.incrementSmsCount()
             record.ruleId?.let { ruleRepository.recordSuccess(it) }
             Log.i(TAG, "Retry successful for record ${record.id}")
@@ -74,13 +74,7 @@ class SmsRetryManager @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Retry failed for record ${record.id}", e)
             val error = e.message ?: e.javaClass.simpleName
-            smsRepository.updateRecord(
-                record.copy(
-                    status = SmsStatus.FAILED.value,
-                    retryCount = record.retryCount + 1,
-                    errorMessage = error,
-                ),
-            )
+            smsRepository.updateRecord(attempt.copy(status = SmsStatus.FAILED.value, errorMessage = error))
             record.ruleId?.let { ruleRepository.recordFailure(it, error) }
             false
         }

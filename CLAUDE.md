@@ -87,11 +87,14 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   `SmsStatusReceiver` -> `SmsStatusHandler` (FAILED + code -> retry; delivered_at), `SimSelector` (-1 default, -2 same SIM,
   0/1 slot), optional `TelegramSender` (bot token pref). Room v4.
   Workflow note: only `ci/release-pipeline` can be pushed, so phases go one PR at a time; later work waits locally.
-- [~] Phase 5: Compose UI (PR #6). Old screens removed. `ui/navigation/AppNavigation` = PermissionGate -> 3 tabs
+- [x] Phase 5: Compose UI (PR #6 merged, released v2.0.0). Old screens removed. `ui/navigation/AppNavigation` = PermissionGate -> 3 tabs
   (Rules / History / Settings) + `rule_edit/{ruleId}`. Strings: English in `values/`, Hebrew in `values-iw/` (generated from
   one table, keep keys in sync or lint MissingTranslation fails). `LocaleManager`: system / iw / en. Global
   "forwarding on/off" switch on the Rules tab (pref `isForwardingEnabled`, default off).
-- [ ] Phase 6: install via Obtainium on phone, restricted settings, battery
+- [~] Phase 6: owner installed v2.0.0 via Obtainium (works). Feedback round 1 (PR #7): keyboard gap in rule editor
+  (fix: `adjustResize` + Save in top bar + imePadding once), FAILED->SENT race fixed. Play Protect blocks install on
+  another phone when sideloaded from a browser (SMS permission + unknown developer): not a code bug, see chat.
+  Pending owner approval: green/red "Try it" result + elegant typography (Heebo) — mockup shown before implementing.
 - [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
 
 ## Notes

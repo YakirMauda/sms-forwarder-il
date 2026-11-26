@@ -100,7 +100,7 @@ class ForwardingProcessor @Inject constructor(
             withTimeout(timeoutMs) {
                 dispatcher.dispatch(target.channel, target.address, payload.copy(recordId = recordId))
             }
-            smsRepository.updateStatus(recordId, SmsStatus.SENT)
+            markSentIfStillPending(recordId)
             preferencesManager.incrementSmsCount()
             ruleId?.let { ruleRepository.recordSuccess(it) }
             Log.i(TAG, "Forwarded via ${target.channel} (record $recordId)")
@@ -116,6 +116,17 @@ class ForwardingProcessor @Inject constructor(
             val retryScheduled = retryScheduler.scheduleRetry(recordId, attempt = 0)
             notifyFailure(ruleId, target.channel, target.address, error, recordId)
             TargetResult.Failed(recordId, error, retryScheduled)
+        }
+    }
+
+    /**
+     * The radio can report a failure (SmsStatusReceiver) before we get here; never turn
+     * that FAILED back into SENT, or its scheduled retry would be skipped.
+     */
+    private suspend fun markSentIfStillPending(recordId: Long) {
+        val current = smsRepository.getRecordById(recordId)
+        if (current == null || current.status == SmsStatus.PENDING.value) {
+            smsRepository.updateStatus(recordId, SmsStatus.SENT)
         }
     }
 
