@@ -3,6 +3,7 @@ package com.qrcommunication.smsforwarder.domain.usecase
 import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.data.local.entity.ForwardingRule
 import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
+import com.qrcommunication.smsforwarder.domain.rules.RuleEvaluator
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -19,7 +20,7 @@ class MatchForwardingRuleUseCaseTest {
 
     @Before
     fun setUp() {
-        useCase = MatchForwardingRuleUseCase(repository)
+        useCase = MatchForwardingRuleUseCase(repository, RuleEvaluator())
     }
 
     private fun rule(
@@ -74,7 +75,7 @@ class MatchForwardingRuleUseCaseTest {
 
     @Test
     fun match_invalidRegex_fallsBackToSubstringMatch() = runTest {
-        // "[unclosed" est une regex invalide, doit fallback sur contains
+        // "[unclosed" is not a valid regex: a legacy pattern falls back to "contains"
         val r = rule(1, senderPattern = "[unclosed")
         whenever(repository.getEnabledOrdered()).thenReturn(listOf(r))
         assertNotNull(useCase("[unclosed sender", "any"))

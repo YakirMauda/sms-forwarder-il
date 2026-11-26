@@ -63,4 +63,17 @@ data class ForwardingRule(
 
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long,
+
+    /**
+     * New rule engine (v3). JSON of a ConditionGroup / list of Target (see RuleJson).
+     * Null = legacy row: sender_pattern / keyword_pattern / destination are used instead.
+     */
+    @ColumnInfo(name = "sender_group")
+    val senderGroupJson: String? = null,
+
+    @ColumnInfo(name = "content_group")
+    val contentGroupJson: String? = null,
+
+    @ColumnInfo(name = "targets")
+    val targetsJson: String? = null,
 )

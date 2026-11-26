@@ -18,7 +18,7 @@ import com.qrcommunication.smsforwarder.data.local.entity.SmsRecord
         ForwardingRule::class,
         AppNotification::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -78,7 +78,11 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   (HiltWorker, delays from user's `RetryPolicy`). READ_SMS, NotificationListener, AppWhitelist screen removed.
   Leftovers for later phases: unused strings of removed screens; `LoopProtection` still normalizes +33 (Phase 3);
   `SmsRetryManager.MAX_RETRIES` also caps manual retry from History after auto-retries (revisit in Phase 4/5).
-- [ ] Phase 3: new rule engine (Room entities + migrations + JVM unit tests)
+- [~] Phase 3: new rule engine (PR #4). Pure Kotlin in `domain/rules/` (RuleModels, PhoneNumbers, ConditionMatchers +
+  MatcherRegistry, RuleEvaluator, RuleJson). Room v3: `forwarding_rules.sender_group/content_group/targets` JSON columns
+  (null = legacy row, converted by `data/mapper/ForwardingRuleMapper`), `sms_records.channel`. `ResolveTargetsUseCase`:
+  enabled rules exist -> only matching rules' targets (none = not forwarded); no enabled rule -> default number from Settings.
+  Pure domain tests can run locally: kotlinc 2.0.21 + junit/json jars (see git log of PR #4), no Android SDK needed.
 - [ ] Phase 4: multipart sending, status tracking, dual-SIM, channels
 - [ ] Phase 5: Compose UI (Rules, History & Stats, Settings), onboarding, Hebrew/RTL
 - [ ] Phase 6: install via Obtainium on phone, restricted settings, battery

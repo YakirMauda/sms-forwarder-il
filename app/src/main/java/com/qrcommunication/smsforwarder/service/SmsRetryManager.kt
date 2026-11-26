@@ -1,12 +1,12 @@
 package com.qrcommunication.smsforwarder.service
 
 import android.util.Log
-import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.data.local.entity.SmsRecord
 import com.qrcommunication.smsforwarder.data.local.entity.SmsStatus
 import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
 import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.data.repository.SmsRepository
+import com.qrcommunication.smsforwarder.domain.rules.Channel
 import com.qrcommunication.smsforwarder.service.sender.DestinationDispatcher
 import com.qrcommunication.smsforwarder.service.sender.MessagePayload
 import kotlinx.coroutines.flow.first
@@ -37,8 +37,7 @@ class SmsRetryManager @Inject constructor(
             return false
         }
 
-        val rule = record.ruleId?.let { ruleRepository.getById(it) }
-        val type = rule?.let { DestinationType.fromValue(it.destinationType) } ?: DestinationType.SMS
+        val channel = Channel.entries.firstOrNull { it.name == record.channel } ?: Channel.SMS
         val payload = MessagePayload(
             sender = record.sender,
             content = record.content,
@@ -47,7 +46,7 @@ class SmsRetryManager @Inject constructor(
         )
 
         return try {
-            dispatcher.dispatch(type, record.destination, payload)
+            dispatcher.dispatch(channel, record.destination, payload)
             smsRepository.updateRecord(
                 record.copy(
                     status = SmsStatus.SENT.value,
@@ -57,7 +56,7 @@ class SmsRetryManager @Inject constructor(
                 ),
             )
             preferencesManager.incrementSmsCount()
-            rule?.let { ruleRepository.recordSuccess(it.id) }
+            record.ruleId?.let { ruleRepository.recordSuccess(it) }
             Log.i(TAG, "Retry successful for record ${record.id}")
             true
         } catch (e: CancellationException) {
@@ -72,7 +71,7 @@ class SmsRetryManager @Inject constructor(
                     errorMessage = error,
                 ),
             )
-            rule?.let { ruleRepository.recordFailure(it.id, error) }
+            record.ruleId?.let { ruleRepository.recordFailure(it, error) }
             false
         }
     }
