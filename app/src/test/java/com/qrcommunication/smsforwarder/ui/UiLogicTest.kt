@@ -69,6 +69,13 @@ class UiLogicTest {
     }
 
     @Test
+    fun newRule_bothGroupsDefaultToOr() {
+        val state = RuleEditState()
+        assertEquals(GroupLogic.OR, state.sender.logic)
+        assertEquals(GroupLogic.OR, state.content.logic)
+    }
+
+    @Test
     fun hasInvalidRegex_onlyForNonBlankRegexConditions() {
         val bad = RuleEditState(content = ConditionGroup(GroupLogic.AND, listOf(Condition(MatchOperator.REGEX, "([x"))))
         val blank = RuleEditState(content = ConditionGroup(GroupLogic.AND, listOf(Condition(MatchOperator.REGEX, ""))))

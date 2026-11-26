@@ -12,6 +12,7 @@ import com.qrcommunication.smsforwarder.domain.rules.Channel
 import com.qrcommunication.smsforwarder.domain.rules.Condition
 import com.qrcommunication.smsforwarder.domain.rules.ConditionGroup
 import com.qrcommunication.smsforwarder.domain.rules.GroupLogic
+import com.qrcommunication.smsforwarder.domain.rules.MatchExplanation
 import com.qrcommunication.smsforwarder.domain.rules.MatchOperator
 import com.qrcommunication.smsforwarder.domain.rules.RegexValidator
 import com.qrcommunication.smsforwarder.domain.rules.Rule
@@ -34,7 +35,8 @@ data class RuleEditState(
     val name: String = "",
     val enabled: Boolean = true,
     val sender: ConditionGroup = ConditionGroup(GroupLogic.OR, listOf(Condition(MatchOperator.EQUALS, ""))),
-    val content: ConditionGroup = ConditionGroup(GroupLogic.AND, listOf(Condition(MatchOperator.CONTAINS, ""))),
+    // Owner's choice: both groups start as OR ("any of these").
+    val content: ConditionGroup = ConditionGroup(GroupLogic.OR, listOf(Condition(MatchOperator.CONTAINS, ""))),
     val targets: List<Target> = listOf(Target(Channel.SMS, "")),
     val testSender: String = "",
     val testBody: String = "",
@@ -116,11 +118,11 @@ class RuleEditViewModel @Inject constructor(
     fun setTargetAddress(index: Int, value: String) = updateTarget(index) { it.copy(address = value) }
     fun setTargetChannel(index: Int, channel: Channel) = updateTarget(index) { it.copy(channel = channel) }
 
-    /** Live answer for the "Try it" box: would THIS rule (as currently edited) forward the sample? */
-    fun testMatches(defaultName: String): Boolean? {
+    /** Live answer for the tester: would THIS rule (as currently edited) forward the sample, and if not, why? */
+    fun testResult(defaultName: String): MatchExplanation? {
         val s = _state.value
         if (s.testSender.isBlank() && s.testBody.isBlank()) return null
-        return evaluator.matches(s.toRule(defaultName).copy(enabled = true), s.testSender, s.testBody)
+        return evaluator.explain(s.toRule(defaultName).copy(enabled = true), s.testSender, s.testBody)
     }
 
     fun save(defaultName: String) {

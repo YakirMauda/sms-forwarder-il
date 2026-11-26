@@ -1,5 +1,15 @@
 package com.qrcommunication.smsforwarder.ui.rules
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.Sms
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SwitchDefaults
+import com.qrcommunication.smsforwarder.ui.common.ConditionTag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,17 +40,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.qrcommunication.smsforwarder.R
 import com.qrcommunication.smsforwarder.domain.rules.ConditionGroup
 import com.qrcommunication.smsforwarder.ui.common.SectionCard
-import com.qrcommunication.smsforwarder.ui.common.SectionTitle
 import com.qrcommunication.smsforwarder.ui.common.labelRes
 import kotlinx.coroutines.launch
 
@@ -63,17 +68,33 @@ fun RulesScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
-                SectionCard {
+                SectionCard(
+                    container = if (forwarding) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                ) {
+                    val onCard = if (forwarding) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            SectionTitle(stringResource(R.string.forwarding_master_title))
+                            Text(
+                                stringResource(R.string.forwarding_master_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = onCard,
+                            )
                             Text(
                                 stringResource(if (forwarding) R.string.forwarding_master_on else R.string.forwarding_master_off),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (forwarding) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                color = if (forwarding) onCard.copy(alpha = 0.85f) else MaterialTheme.colorScheme.error,
                             )
                         }
-                        Switch(checked = forwarding, onCheckedChange = viewModel::setForwardingEnabled)
+                        Switch(
+                            checked = forwarding,
+                            onCheckedChange = viewModel::setForwardingEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedBorderColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        )
                     }
                 }
             }
@@ -116,53 +137,78 @@ fun RulesScreen(
 @Composable
 private fun RuleCard(item: RuleItem, onToggle: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val rule = item.rule
-    SectionCard(Modifier.alpha(if (rule.enabled) 1f else 0.6f)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    SectionCard(Modifier.alpha(if (rule.enabled) 1f else 0.62f)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                Modifier.size(36.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            }
             Text(rule.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Switch(checked = rule.enabled, onCheckedChange = onToggle)
         }
-        Spacer(Modifier.height(6.dp))
-        SummaryLine(stringResource(R.string.rule_sender), groupSummary(rule.sender, stringResource(R.string.rule_any_sender)))
-        SummaryLine(stringResource(R.string.rule_content), groupSummary(rule.content, stringResource(R.string.rule_any_content)))
-        SummaryLine(
-            stringResource(R.string.rule_to),
-            AnnotatedString(rule.targets.joinToString(", ") { "\u2066${it.address}\u2069" }),
-        )
+        Spacer(Modifier.height(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            GroupLine(stringResource(R.string.rule_sender), rule.sender, stringResource(R.string.rule_any_sender))
+            GroupLine(stringResource(R.string.rule_content), rule.content, stringResource(R.string.rule_any_content))
+            LabeledRow(stringResource(R.string.rule_to)) {
+                Text(
+                    rule.targets.joinToString(", ") { "\u2066${it.address}\u2069" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+        HorizontalDivider(Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.surfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit)) }
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit), fontWeight = FontWeight.SemiBold) }
             TextButton(onClick = onDelete) {
-                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SummaryLine(label: String, value: AnnotatedString) {
-    Text(
-        buildAnnotatedString {
-            append("$label: ")
-            append(value)
-        },
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+private fun LabeledRow(label: String, content: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(52.dp).padding(top = 2.dp),
+        )
+        Box(Modifier.weight(1f)) { content() }
+    }
 }
 
-/** "equals Leumi OR contains Discount" — values are isolated so numbers stay LTR inside Hebrew. */
+/** Conditions as tags joined by the group's AND/OR word. Values are isolated so numbers stay LTR in Hebrew. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun groupSummary(group: ConditionGroup, anyText: String): AnnotatedString {
-    if (group.isEmpty) return AnnotatedString(anyText)
-    val joiner = stringResource(group.logic.labelRes())
-    val ops = group.conditions.map { stringResource(it.operator.labelRes()) }
-    val accent = MaterialTheme.colorScheme.primary
-    return buildAnnotatedString {
-        group.conditions.forEachIndexed { i, c ->
-            if (i > 0) withStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold)) { append(" $joiner ") }
-            append(ops[i])
-            append(" ")
-            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)) {
-                append("\u2068${c.value}\u2069")
+private fun GroupLine(label: String, group: ConditionGroup, anyText: String) {
+    LabeledRow(label) {
+        if (group.isEmpty) {
+            Text(anyText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            val joiner = stringResource(group.logic.labelRes())
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                group.conditions.forEachIndexed { i, c ->
+                    if (i > 0) {
+                        Text(
+                            joiner,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                        )
+                    }
+                    ConditionTag(stringResource(c.operator.labelRes()), "\u2068${c.value}\u2069")
+                }
             }
         }
     }

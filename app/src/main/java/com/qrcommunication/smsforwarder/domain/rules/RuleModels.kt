@@ -49,5 +49,9 @@ data class Rule(
     val targets: List<Target> = emptyList(),
 )
 
+data class MatchExplanation(val senderMatches: Boolean, val contentMatches: Boolean) {
+    val matches: Boolean get() = senderMatches && contentMatches
+}
+
 /** A target to send to, plus the (first, highest-priority) rule that produced it. */
 data class ResolvedTarget(val target: Target, val ruleId: Long?)
