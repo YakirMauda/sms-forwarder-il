@@ -1,128 +1,131 @@
 package com.qrcommunication.smsforwarder.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavHostController
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
-import com.qrcommunication.smsforwarder.ui.components.PermissionHandler
-import com.qrcommunication.smsforwarder.ui.detail.DetailScreen
-import com.qrcommunication.smsforwarder.ui.diagnostics.DiagnosticsScreen
-import com.qrcommunication.smsforwarder.ui.filter.FilterScreen
+import com.qrcommunication.smsforwarder.R
 import com.qrcommunication.smsforwarder.ui.history.HistoryScreen
-import com.qrcommunication.smsforwarder.ui.main.MainScreen
-import com.qrcommunication.smsforwarder.ui.notifications.NotificationCenterScreen
-import com.qrcommunication.smsforwarder.ui.onboarding.OnboardingScreen
+import com.qrcommunication.smsforwarder.ui.permissions.BatteryBanner
+import com.qrcommunication.smsforwarder.ui.permissions.BatteryDialog
+import com.qrcommunication.smsforwarder.ui.permissions.PermissionGate
+import com.qrcommunication.smsforwarder.ui.permissions.SystemState
 import com.qrcommunication.smsforwarder.ui.rules.RuleEditScreen
+import com.qrcommunication.smsforwarder.ui.rules.RuleEditViewModel
 import com.qrcommunication.smsforwarder.ui.rules.RulesScreen
 import com.qrcommunication.smsforwarder.ui.settings.SettingsScreen
-import com.qrcommunication.smsforwarder.ui.stats.StatsScreen
 
+private data class Tab(val route: String, val label: Int, val icon: ImageVector)
+
+private val TABS = listOf(
+    Tab(Routes.RULES, R.string.tab_rules, Icons.AutoMirrored.Filled.List),
+    Tab(Routes.HISTORY, R.string.tab_history, Icons.Filled.History),
+    Tab(Routes.SETTINGS, R.string.tab_settings, Icons.Filled.Settings),
+)
+
+/** App shell: permission gate -> 3 tabs (Rules / History / Settings) + full-screen rule editor. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation(
-    navController: NavHostController = rememberNavController(),
-) {
+fun AppNavigation() = PermissionGate {
     val context = LocalContext.current
-    val preferencesManager = remember { PreferencesManager(context) }
-    var permissionsGranted by remember { mutableStateOf(false) }
+    val nav = rememberNavController()
+    val snackbar = remember { SnackbarHostState() }
+    val backStack by nav.currentBackStackEntryAsState()
+    val route = backStack?.destination?.route
 
-    if (!permissionsGranted) {
-        PermissionHandler(
-            onAllPermissionsGranted = { permissionsGranted = true },
-            onPermissionDenied = { permissionsGranted = true },
-        )
-        return
+    var batteryExempt by remember { mutableStateOf(SystemState.isIgnoringBatteryOptimizations(context)) }
+    var showBatteryDialog by rememberSaveable { mutableStateOf(false) }
+    var batteryPromptShown by rememberSaveable { mutableStateOf(false) }
+
+    LifecycleResumeEffect(Unit) {
+        batteryExempt = SystemState.isIgnoringBatteryOptimizations(context)
+        onPauseOrDispose { }
     }
-
-    val startDestination = if (preferencesManager.isFirstLaunch) {
-        Screen.Onboarding.route
-    } else {
-        Screen.Main.route
+    // Ask once per launch, right after permissions are in place.
+    LaunchedEffect(batteryExempt) {
+        if (!batteryExempt && !batteryPromptShown) {
+            batteryPromptShown = true
+            showBatteryDialog = true
+        }
     }
+    if (showBatteryDialog) BatteryDialog(onDismiss = { showBatteryDialog = false })
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(Screen.Onboarding.route) {
-            OnboardingScreen(
-                onFinish = {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+    NavHost(nav, startDestination = Routes.RULES, modifier = Modifier.fillMaxSize()) {
+        TABS.forEach { tab ->
+            composable(tab.route) {
+                Scaffold(
+                    topBar = { CenterAlignedTopAppBar(title = { Text(stringResource(tab.label)) }) },
+                    snackbarHost = { SnackbarHost(snackbar) },
+                    bottomBar = {
+                        NavigationBar {
+                            TABS.forEach { t ->
+                                NavigationBarItem(
+                                    selected = route == t.route,
+                                    onClick = {
+                                        nav.navigate(t.route) {
+                                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    icon = { Icon(t.icon, contentDescription = null) },
+                                    label = { Text(stringResource(t.label)) },
+                                )
+                            }
+                        }
+                    },
+                ) { padding ->
+                    Column(Modifier.fillMaxSize().padding(padding)) {
+                        if (!batteryExempt) BatteryBanner(onFix = { showBatteryDialog = true })
+                        when (tab.route) {
+                            Routes.RULES -> RulesScreen(
+                                snackbar = snackbar,
+                                onEditRule = { nav.navigate(Routes.ruleEdit(it)) },
+                                onNewRule = { nav.navigate(Routes.ruleEdit(0)) },
+                            )
+                            Routes.HISTORY -> HistoryScreen(snackbar)
+                            Routes.SETTINGS -> SettingsScreen(onFixBattery = { showBatteryDialog = true })
+                        }
                     }
-                },
-            )
+                }
+            }
         }
-
-        composable(Screen.Main.route) {
-            MainScreen(
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToHistory = { navController.navigate(Screen.History.route) },
-                onNavigateToStats = { navController.navigate(Screen.Stats.route) },
-                onNavigateToRules = { navController.navigate(Screen.Rules.route) },
-                onNavigateToDiagnostics = { navController.navigate(Screen.Diagnostics.route) },
-                onNavigateToNotifications = { navController.navigate(Screen.NotificationCenter.route) },
-            )
-        }
-
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToFilters = { navController.navigate(Screen.Filter.route) },
-                onNavigateToRules = { navController.navigate(Screen.Rules.route) },
-                onNavigateToDiagnostics = { navController.navigate(Screen.Diagnostics.route) },
-                onNavigateToNotifications = { navController.navigate(Screen.NotificationCenter.route) },
-            )
-        }
-
-        composable(Screen.History.route) {
-            HistoryScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToDetail = { id -> navController.navigate(Screen.Detail().createRoute(id)) },
-            )
-        }
-
         composable(
-            route = Screen.Detail().route,
-            arguments = listOf(navArgument(Screen.Detail.SMS_ID_ARG) { type = NavType.LongType }),
-        ) { backStackEntry ->
-            val smsId = backStackEntry.arguments?.getLong(Screen.Detail.SMS_ID_ARG) ?: 0L
-            DetailScreen(smsId = smsId, onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Filter.route) {
-            FilterScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Stats.route) {
-            StatsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Rules.route) {
-            RulesScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToEdit = { id -> navController.navigate(Screen.RuleEdit().createRoute(id)) },
-            )
-        }
-
-        composable(
-            route = Screen.RuleEdit().route,
-            arguments = listOf(navArgument(Screen.RuleEdit.RULE_ID_ARG) { type = NavType.LongType }),
+            Routes.RULE_EDIT,
+            arguments = listOf(navArgument(RuleEditViewModel.ARG_RULE_ID) { type = NavType.LongType }),
         ) {
-            RuleEditScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Diagnostics.route) {
-            DiagnosticsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.NotificationCenter.route) {
-            NotificationCenterScreen(onNavigateBack = { navController.popBackStack() })
+            RuleEditScreen(onDone = { nav.popBackStack() })
         }
     }
 }

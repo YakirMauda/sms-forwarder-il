@@ -83,13 +83,16 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   Pure domain tests can run locally: kotlinc 2.0.21 + junit/hamcrest/json jars, no Android SDK needed.
   **Owner decision:** app is rule-driven. "Default number" is an optional catch-all (pref `isDefaultNumberEnabled`, off
   by default): unmatched SMS go there only when switched on.
-- [~] Phase 4: multipart sending, status tracking, dual-SIM, channels (PR #5). `MessageSender` per channel (Hilt @IntoSet),
+- [x] Phase 4: multipart sending, status tracking, dual-SIM, channels (PR #5 merged). `MessageSender` per channel (Hilt @IntoSet),
   `SmsStatusReceiver` -> `SmsStatusHandler` (FAILED + code -> retry; delivered_at), `SimSelector` (-1 default, -2 same SIM,
   0/1 slot), optional `TelegramSender` (bot token pref). Room v4.
   Workflow note: only `ci/release-pipeline` can be pushed, so phases go one PR at a time; later work waits locally.
-- [ ] Phase 5: Compose UI (Rules, History & Stats, Settings), onboarding, Hebrew/RTL
+- [~] Phase 5: Compose UI (PR #6). Old screens removed. `ui/navigation/AppNavigation` = PermissionGate -> 3 tabs
+  (Rules / History / Settings) + `rule_edit/{ruleId}`. Strings: English in `values/`, Hebrew in `values-iw/` (generated from
+  one table, keep keys in sync or lint MissingTranslation fails). `LocaleManager`: system / iw / en. Global
+  "forwarding on/off" switch on the Rules tab (pref `isForwardingEnabled`, default off).
 - [ ] Phase 6: install via Obtainium on phone, restricted settings, battery
-- [ ] Phase 7: README credits, regular release cycle
+- [~] Phase 7: README rewritten with AGPL credits + changes (in PR #6). Release = owner publishes tag in web UI.
 
 ## Notes
 - Android SDK can't be downloaded in some sandboxes: rely on GitHub Actions for builds; keep domain logic pure Kotlin

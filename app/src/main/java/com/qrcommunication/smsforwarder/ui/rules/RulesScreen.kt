@@ -1,194 +1,169 @@
 package com.qrcommunication.smsforwarder.ui.rules
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material.icons.filled.Webhook
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.qrcommunication.smsforwarder.R
-import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
-import com.qrcommunication.smsforwarder.data.local.entity.ForwardingRule
-import com.qrcommunication.smsforwarder.ui.components.common.EmptyState
+import com.qrcommunication.smsforwarder.domain.rules.ConditionGroup
+import com.qrcommunication.smsforwarder.ui.common.SectionCard
+import com.qrcommunication.smsforwarder.ui.common.SectionTitle
+import com.qrcommunication.smsforwarder.ui.common.labelRes
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulesScreen(
-    onNavigateBack: () -> Unit,
-    onNavigateToEdit: (Long) -> Unit,
+    snackbar: SnackbarHostState,
+    onEditRule: (Long) -> Unit,
+    onNewRule: () -> Unit,
     viewModel: RulesViewModel = hiltViewModel(),
 ) {
     val rules by viewModel.rules.collectAsState()
+    val forwarding by viewModel.forwardingEnabled.collectAsState()
+    val scope = rememberCoroutineScope()
+    val deletedMsg = stringResource(R.string.rule_deleted)
+    val undoLabel = stringResource(R.string.action_undo)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_rules_transfer), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { onNavigateToEdit(0L) }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.rules_new))
-            }
-        },
-    ) { paddingValues ->
-        if (rules.isEmpty()) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)) {
-                EmptyState(
-                    icon = Icons.AutoMirrored.Filled.Rule,
-                    title = stringResource(R.string.rules_empty),
-                    description = stringResource(R.string.rules_empty_hint),
-                    actionLabel = stringResource(R.string.rules_create_button),
-                    onAction = { onNavigateToEdit(0L) },
-                )
-            }
-            return@Scaffold
-        }
-
+    Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            items(rules, key = { it.id }) { rule ->
-                RuleItem(
-                    rule = rule,
-                    onClick = { onNavigateToEdit(rule.id) },
-                    onToggle = { viewModel.toggleEnabled(rule) },
-                    onDelete = { viewModel.delete(rule) },
+            item {
+                SectionCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            SectionTitle(stringResource(R.string.forwarding_master_title))
+                            Text(
+                                stringResource(if (forwarding) R.string.forwarding_master_on else R.string.forwarding_master_off),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (forwarding) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        Switch(checked = forwarding, onCheckedChange = viewModel::setForwardingEnabled)
+                    }
+                }
+            }
+            if (rules.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.rules_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(24.dp),
+                    )
+                }
+            }
+            items(rules, key = { it.rule.id }) { item ->
+                RuleCard(
+                    item = item,
+                    onToggle = { viewModel.setRuleEnabled(item.rule.id, it) },
+                    onEdit = { onEditRule(item.rule.id) },
+                    onDelete = {
+                        viewModel.delete(item)
+                        scope.launch {
+                            val result = snackbar.showSnackbar(deletedMsg, actionLabel = undoLabel)
+                            if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete()
+                        }
+                    },
                 )
+            }
+        }
+        ExtendedFloatingActionButton(
+            onClick = onNewRule,
+            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            text = { Text(stringResource(R.string.rules_add)) },
+            containerColor = MaterialTheme.colorScheme.tertiary,
+            contentColor = MaterialTheme.colorScheme.onTertiary,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(18.dp),
+        )
+    }
+}
+
+@Composable
+private fun RuleCard(item: RuleItem, onToggle: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val rule = item.rule
+    SectionCard(Modifier.alpha(if (rule.enabled) 1f else 0.6f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(rule.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Switch(checked = rule.enabled, onCheckedChange = onToggle)
+        }
+        Spacer(Modifier.height(6.dp))
+        SummaryLine(stringResource(R.string.rule_sender), groupSummary(rule.sender, stringResource(R.string.rule_any_sender)))
+        SummaryLine(stringResource(R.string.rule_content), groupSummary(rule.content, stringResource(R.string.rule_any_content)))
+        SummaryLine(
+            stringResource(R.string.rule_to),
+            AnnotatedString(rule.targets.joinToString(", ") { "\u2066${it.address}\u2069" }),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit)) }
+            TextButton(onClick = onDelete) {
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
             }
         }
     }
 }
 
 @Composable
-private fun RuleItem(
-    rule: ForwardingRule,
-    onClick: () -> Unit,
-    onToggle: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val type = DestinationType.fromValue(rule.destinationType)
-    val icon = when (type) {
-        DestinationType.SMS -> Icons.Filled.Sms
-        DestinationType.WEBHOOK -> Icons.Filled.Webhook
-    }
+private fun SummaryLine(label: String, value: AnnotatedString) {
+    Text(
+        buildAnnotatedString {
+            append("$label: ")
+            append(value)
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (rule.isEnabled) {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            } else {
-                MaterialTheme.colorScheme.surface
-            },
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (rule.isEnabled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = rule.name.ifBlank { stringResource(R.string.rule_default_name, rule.id) },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringResource(R.string.rules_dest_format, type.name, rule.destination),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                buildString {
-                    rule.senderPattern?.takeIf { it.isNotBlank() }?.let { append(stringResource(R.string.rule_from_prefix, it) + " ") }
-                    rule.keywordPattern?.takeIf { it.isNotBlank() }?.let { append(stringResource(R.string.rule_keyword_prefix, it)) }
-                }.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (rule.successCount > 0 || rule.failureCount > 0) {
-                    Text(
-                        text = stringResource(R.string.rules_stats_format, rule.successCount, rule.failureCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Switch(checked = rule.isEnabled, onCheckedChange = { onToggle() })
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+/** "equals Leumi OR contains Discount" — values are isolated so numbers stay LTR inside Hebrew. */
+@Composable
+private fun groupSummary(group: ConditionGroup, anyText: String): AnnotatedString {
+    if (group.isEmpty) return AnnotatedString(anyText)
+    val joiner = stringResource(group.logic.labelRes())
+    val ops = group.conditions.map { stringResource(it.operator.labelRes()) }
+    val accent = MaterialTheme.colorScheme.primary
+    return buildAnnotatedString {
+        group.conditions.forEachIndexed { i, c ->
+            if (i > 0) withStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold)) { append(" $joiner ") }
+            append(ops[i])
+            append(" ")
+            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)) {
+                append("\u2068${c.value}\u2069")
             }
         }
     }
-}
-
-@Suppress("unused")
-private fun pickIcon(type: DestinationType): ImageVector = when (type) {
-    DestinationType.SMS -> Icons.Filled.Sms
-    DestinationType.WEBHOOK -> Icons.Filled.Webhook
 }

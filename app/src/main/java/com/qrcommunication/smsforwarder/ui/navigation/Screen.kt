@@ -1,29 +1,13 @@
 package com.qrcommunication.smsforwarder.ui.navigation
 
-sealed class Screen(val route: String) {
+import com.qrcommunication.smsforwarder.ui.rules.RuleEditViewModel
 
-    data object Main : Screen("main")
-    data object Settings : Screen("settings")
-    data object History : Screen("history")
-    data object Filter : Screen("filter")
-    data object Stats : Screen("stats")
-    data object Onboarding : Screen("onboarding")
-    data object Rules : Screen("rules")
-    data object Diagnostics : Screen("diagnostics")
-    data object NotificationCenter : Screen("notification_center")
+object Routes {
+    const val RULES = "rules"
+    const val HISTORY = "history"
+    const val SETTINGS = "settings"
+    const val RULE_EDIT = "rule_edit/{${RuleEditViewModel.ARG_RULE_ID}}"
 
-    data class RuleEdit(val ruleId: Long = 0L) : Screen("rule_edit/{ruleId}") {
-        fun createRoute(id: Long): String = "rule_edit/$id"
-        companion object {
-            const val RULE_ID_ARG = "ruleId"
-        }
-    }
-
-    data class Detail(val smsId: Long = 0L) : Screen("detail/{smsId}") {
-        fun createRoute(smsId: Long): String = "detail/$smsId"
-
-        companion object {
-            const val SMS_ID_ARG = "smsId"
-        }
-    }
+    /** id 0 = new rule. */
+    fun ruleEdit(id: Long) = "rule_edit/$id"
 }

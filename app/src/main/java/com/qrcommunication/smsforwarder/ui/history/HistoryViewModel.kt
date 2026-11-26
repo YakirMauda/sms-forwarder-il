@@ -2,150 +2,78 @@ package com.qrcommunication.smsforwarder.ui.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.content.Context
-import com.qrcommunication.smsforwarder.R
-import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.data.local.entity.SmsRecord
 import com.qrcommunication.smsforwarder.data.local.entity.SmsStatus
+import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.data.repository.SmsRepository
-import com.qrcommunication.smsforwarder.domain.usecase.GetHistoryUseCase
-import com.qrcommunication.smsforwarder.domain.usecase.RetryResult
-import com.qrcommunication.smsforwarder.domain.usecase.RetrySmsUseCase
+import com.qrcommunication.smsforwarder.service.SmsRetryManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
-data class HistoryUiState(
+/** Pure, unit-tested numbers for the stats tiles. */
+data class HistoryStats(val today: Int, val month: Int, val successRatePercent: Int?, val failed: Int) {
+    companion object {
+        fun from(records: List<SmsRecord>, now: Long): HistoryStats {
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = now
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val dayStart = cal.timeInMillis
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            val monthStart = cal.timeInMillis
+            val sent = records.filter { it.status == SmsStatus.SENT.value }
+            val failed = records.count { it.status == SmsStatus.FAILED.value }
+            val done = sent.size + failed
+            return HistoryStats(
+                today = sent.count { it.receivedAt >= dayStart },
+                month = sent.count { it.receivedAt >= monthStart },
+                successRatePercent = if (done == 0) null else sent.size * 100 / done,
+                failed = failed,
+            )
+        }
+    }
+}
+
+data class HistoryState(
     val records: List<SmsRecord> = emptyList(),
-    val isLoading: Boolean = true,
-    val searchQuery: String = "",
-    val selectedStatusFilter: SmsStatus? = null,
-    val selectedDestinationFilter: DestinationType? = null,
-    val dateRangeStart: Long? = null,
-    val dateRangeEnd: Long? = null,
-    val totalCount: Int = 0,
-    val retryFeedback: String? = null,
+    val ruleNames: Map<Long, String> = emptyMap(),
+    val stats: HistoryStats = HistoryStats(0, 0, null, 0),
 )
+
+sealed class RetryEvent {
+    data object Resent : RetryEvent()
+    data class Failed(val error: String) : RetryEvent()
+}
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val getHistoryUseCase: GetHistoryUseCase,
     private val smsRepository: SmsRepository,
-    private val retrySms: RetrySmsUseCase,
+    ruleRepository: ForwardingRuleRepository,
+    private val retryManager: SmsRetryManager,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HistoryUiState())
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+    val state: StateFlow<HistoryState> = combine(smsRepository.getAllRecords(), ruleRepository.observeAll()) { records, rules ->
+        HistoryState(
+            records = records.sortedByDescending { it.receivedAt },
+            ruleNames = rules.associate { it.id to it.name },
+            stats = HistoryStats.from(records, System.currentTimeMillis()),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState())
 
-    private var collectionJob: Job? = null
+    private val _events = MutableSharedFlow<RetryEvent>(extraBufferCapacity = 4)
+    val events: SharedFlow<RetryEvent> = _events
 
-    init {
-        loadRecords()
-        observeTotalCount()
+    fun retry(record: SmsRecord) = viewModelScope.launch {
+        val ok = retryManager.retryNow(record)
+        val updated = smsRepository.getRecordById(record.id)
+        _events.emit(if (ok) RetryEvent.Resent else RetryEvent.Failed(updated?.errorMessage.orEmpty()))
     }
-
-    private fun loadRecords() {
-        collectionJob?.cancel()
-        collectionJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            val state = _uiState.value
-            val baseFlow = when {
-                state.searchQuery.isNotBlank() -> getHistoryUseCase.searchRecords(state.searchQuery)
-                state.selectedStatusFilter != null -> getHistoryUseCase.getRecordsByStatus(state.selectedStatusFilter)
-                else -> getHistoryUseCase.getAllRecords()
-            }
-
-            baseFlow.catch { _ ->
-                _uiState.update { it.copy(isLoading = false) }
-            }.collect { records ->
-                val filtered = records
-                    .let { applyDestinationFilter(it, state.selectedDestinationFilter) }
-                    .let { applyDateRangeFilter(it, state.dateRangeStart, state.dateRangeEnd) }
-                _uiState.update { it.copy(records = filtered, isLoading = false) }
-            }
-        }
-    }
-
-    private fun applyDestinationFilter(
-        records: List<SmsRecord>,
-        filter: DestinationType?,
-    ): List<SmsRecord> {
-        if (filter == null) return records
-        return records.filter { inferDestinationType(it.destination) == filter }
-    }
-
-    private fun applyDateRangeFilter(
-        records: List<SmsRecord>,
-        startMs: Long?,
-        endMs: Long?,
-    ): List<SmsRecord> {
-        if (startMs == null && endMs == null) return records
-        val effectiveStart = startMs ?: Long.MIN_VALUE
-        val effectiveEnd = endMs ?: Long.MAX_VALUE
-        return records.filter { it.receivedAt in effectiveStart..effectiveEnd }
-    }
-
-    /**
-     * Heuristique : URL avec scheme = WEBHOOK, sinon SMS.
-     * On evite ainsi une migration DB pour stocker explicitement le type.
-     */
-    private fun inferDestinationType(destination: String): DestinationType = when {
-        destination.contains("://") -> DestinationType.WEBHOOK
-        else -> DestinationType.SMS
-    }
-
-    private fun observeTotalCount() {
-        viewModelScope.launch {
-            getHistoryUseCase.getRecordCount()
-                .catch { /* ignore */ }
-                .collect { count ->
-                    _uiState.update { it.copy(totalCount = count) }
-                }
-        }
-    }
-
-    fun search(query: String) {
-        _uiState.update { it.copy(searchQuery = query, selectedStatusFilter = null) }
-        loadRecords()
-    }
-
-    fun filterByStatus(status: SmsStatus?) {
-        _uiState.update { it.copy(selectedStatusFilter = status, searchQuery = "") }
-        loadRecords()
-    }
-
-    fun filterByDestination(type: DestinationType?) {
-        _uiState.update { it.copy(selectedDestinationFilter = type) }
-        loadRecords()
-    }
-
-    fun filterByDateRange(startMs: Long?, endMs: Long?) {
-        _uiState.update { it.copy(dateRangeStart = startMs, dateRangeEnd = endMs) }
-        loadRecords()
-    }
-
-    fun clearDateRange() = filterByDateRange(null, null)
-
-    fun retry(recordId: Long) = viewModelScope.launch {
-        val message = when (val result = retrySms(recordId)) {
-            RetryResult.Success -> context.getString(R.string.retry_success)
-            RetryResult.NotFound -> context.getString(R.string.detail_not_found)
-            RetryResult.MaxRetriesReached -> context.getString(R.string.detail_retry_max_reached)
-            is RetryResult.Failed -> context.getString(R.string.retry_failed_short, result.error)
-        }
-        _uiState.update { it.copy(retryFeedback = message) }
-    }
-
-    fun clearRetryFeedback() = _uiState.update { it.copy(retryFeedback = null) }
-
-    fun deleteAll() = viewModelScope.launch { smsRepository.deleteAllRecords() }
 }

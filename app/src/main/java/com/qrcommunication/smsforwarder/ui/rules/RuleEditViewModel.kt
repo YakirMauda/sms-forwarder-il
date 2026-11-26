@@ -3,14 +3,21 @@ package com.qrcommunication.smsforwarder.ui.rules
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.content.Context
-import com.qrcommunication.smsforwarder.R
-import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.data.local.entity.ForwardingRule
+import com.qrcommunication.smsforwarder.data.mapper.toDomain
+import com.qrcommunication.smsforwarder.data.mapper.toEntity
+import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
 import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
-import com.qrcommunication.smsforwarder.domain.usecase.MatchForwardingRuleUseCase
+import com.qrcommunication.smsforwarder.domain.rules.Channel
+import com.qrcommunication.smsforwarder.domain.rules.Condition
+import com.qrcommunication.smsforwarder.domain.rules.ConditionGroup
+import com.qrcommunication.smsforwarder.domain.rules.GroupLogic
+import com.qrcommunication.smsforwarder.domain.rules.MatchOperator
+import com.qrcommunication.smsforwarder.domain.rules.RegexValidator
+import com.qrcommunication.smsforwarder.domain.rules.Rule
+import com.qrcommunication.smsforwarder.domain.rules.RuleEvaluator
+import com.qrcommunication.smsforwarder.domain.rules.Target
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,109 +25,137 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class RuleEditUiState(
-    val id: Long = 0L,
+enum class GroupKind { SENDER, CONTENT }
+
+enum class RuleEditError { NO_TARGET, INVALID_REGEX }
+
+data class RuleEditState(
+    val id: Long = 0,
     val name: String = "",
-    val priority: Int = 0,
-    val senderPattern: String = "",
-    val keywordPattern: String = "",
-    val destinationType: DestinationType = DestinationType.SMS,
-    val destination: String = "",
-    val isEnabled: Boolean = true,
-    val testSampleSender: String = "",
-    val testSampleContent: String = "",
-    val testResult: String? = null,
-    val isSaving: Boolean = false,
-    val isSaved: Boolean = false,
-    val isLoading: Boolean = true,
-)
+    val enabled: Boolean = true,
+    val sender: ConditionGroup = ConditionGroup(GroupLogic.OR, listOf(Condition(MatchOperator.EQUALS, ""))),
+    val content: ConditionGroup = ConditionGroup(GroupLogic.AND, listOf(Condition(MatchOperator.CONTAINS, ""))),
+    val targets: List<Target> = listOf(Target(Channel.SMS, "")),
+    val testSender: String = "",
+    val testBody: String = "",
+    val error: RuleEditError? = null,
+    val saved: Boolean = false,
+    val telegramConfigured: Boolean = false,
+) {
+    fun group(kind: GroupKind) = if (kind == GroupKind.SENDER) sender else content
+
+    /** Rule as it would be saved: blank conditions/targets dropped, default name if empty. */
+    fun toRule(defaultName: String): Rule = Rule(
+        id = id,
+        name = name.trim().ifEmpty { defaultName },
+        enabled = enabled,
+        sender = sender.copy(conditions = sender.conditions.filter { it.value.isNotBlank() }),
+        content = content.copy(conditions = content.conditions.filter { it.value.isNotBlank() }),
+        targets = targets.map { it.copy(address = it.address.trim()) }.filter { it.address.isNotEmpty() },
+    )
+
+    val hasInvalidRegex: Boolean
+        get() = (sender.conditions + content.conditions).any {
+            it.operator == MatchOperator.REGEX && it.value.isNotBlank() && !RegexValidator.isValid(it.value)
+        }
+}
 
 @HiltViewModel
 class RuleEditViewModel @Inject constructor(
-    savedState: SavedStateHandle,
-    @ApplicationContext private val context: Context,
+    savedStateHandle: SavedStateHandle,
     private val repository: ForwardingRuleRepository,
-    private val matchRule: MatchForwardingRuleUseCase,
+    private val evaluator: RuleEvaluator,
+    preferences: PreferencesManager,
 ) : ViewModel() {
 
-    private val ruleId: Long = savedState["ruleId"] ?: 0L
+    private val ruleId: Long = savedStateHandle.get<Long>(ARG_RULE_ID) ?: 0L
+    private var original: ForwardingRule? = null
 
-    private val _uiState = MutableStateFlow(RuleEditUiState())
-    val uiState: StateFlow<RuleEditUiState> = _uiState.asStateFlow()
+    private val _state = MutableStateFlow(RuleEditState(telegramConfigured = preferences.telegramBotToken.isNotBlank()))
+    val state: StateFlow<RuleEditState> = _state.asStateFlow()
 
     init {
-        load()
-    }
-
-    private fun load() = viewModelScope.launch {
-        if (ruleId == 0L) {
-            _uiState.update { it.copy(isLoading = false) }
-            return@launch
-        }
-        val rule = repository.getById(ruleId)
-        if (rule == null) {
-            _uiState.update { it.copy(isLoading = false) }
-            return@launch
-        }
-        _uiState.update {
-            RuleEditUiState(
-                id = rule.id,
-                name = rule.name,
-                priority = rule.priority,
-                senderPattern = rule.senderPattern.orEmpty(),
-                keywordPattern = rule.keywordPattern.orEmpty(),
-                destinationType = DestinationType.fromValue(rule.destinationType),
-                destination = rule.destination,
-                isEnabled = rule.isEnabled,
-                isLoading = false,
-            )
+        if (ruleId > 0) viewModelScope.launch {
+            val entity = repository.getById(ruleId) ?: return@launch
+            original = entity
+            val rule = entity.toDomain()
+            _state.update {
+                it.copy(
+                    id = rule.id,
+                    name = rule.name,
+                    enabled = rule.enabled,
+                    sender = rule.sender,
+                    content = rule.content,
+                    targets = rule.targets.ifEmpty { listOf(Target(Channel.SMS, "")) },
+                )
+            }
         }
     }
 
-    fun updateName(value: String) = _uiState.update { it.copy(name = value) }
-    fun updatePriority(value: Int) = _uiState.update { it.copy(priority = value) }
-    fun updateSenderPattern(value: String) = _uiState.update { it.copy(senderPattern = value) }
-    fun updateKeywordPattern(value: String) = _uiState.update { it.copy(keywordPattern = value) }
-    fun updateDestinationType(value: DestinationType) =
-        _uiState.update { it.copy(destinationType = value) }
-    fun updateDestination(value: String) = _uiState.update { it.copy(destination = value) }
-    fun updateEnabled(value: Boolean) = _uiState.update { it.copy(isEnabled = value) }
-    fun updateTestSender(value: String) = _uiState.update { it.copy(testSampleSender = value) }
-    fun updateTestContent(value: String) = _uiState.update { it.copy(testSampleContent = value) }
+    fun setName(value: String) = _state.update { it.copy(name = value) }
+    fun setEnabled(value: Boolean) = _state.update { it.copy(enabled = value) }
+    fun setTestSender(value: String) = _state.update { it.copy(testSender = value) }
+    fun setTestBody(value: String) = _state.update { it.copy(testBody = value) }
 
-    fun testRule() = viewModelScope.launch {
-        val state = _uiState.value
-        val match = matchRule(state.testSampleSender, state.testSampleContent)
-        val result = when {
-            match == null -> context.getString(R.string.rule_test_no_match)
-            match.id == state.id -> context.getString(R.string.rule_test_match)
-            else -> context.getString(R.string.rule_test_other_match, match.name)
-        }
-        _uiState.update { it.copy(testResult = result) }
+    fun setLogic(kind: GroupKind, logic: GroupLogic) = updateGroup(kind) { it.copy(logic = logic) }
+
+    fun addCondition(kind: GroupKind) = updateGroup(kind) {
+        val op = if (kind == GroupKind.SENDER) MatchOperator.EQUALS else MatchOperator.CONTAINS
+        it.copy(conditions = it.conditions + Condition(op, ""))
     }
 
-    fun clearTestResult() = _uiState.update { it.copy(testResult = null) }
+    fun removeCondition(kind: GroupKind, index: Int) = updateGroup(kind) {
+        it.copy(conditions = it.conditions.filterIndexed { i, _ -> i != index })
+    }
 
-    fun save() = viewModelScope.launch {
-        val state = _uiState.value
-        if (state.destination.isBlank() || state.name.isBlank()) {
-            _uiState.update { it.copy(testResult = context.getString(R.string.rule_test_missing_fields)) }
-            return@launch
+    fun setOperator(kind: GroupKind, index: Int, op: MatchOperator) = updateCondition(kind, index) { it.copy(operator = op) }
+    fun setValue(kind: GroupKind, index: Int, value: String) = updateCondition(kind, index) { it.copy(value = value) }
+
+    fun addTarget() = _state.update { it.copy(targets = it.targets + Target(Channel.SMS, "")) }
+    fun removeTarget(index: Int) = _state.update { s -> s.copy(targets = s.targets.filterIndexed { i, _ -> i != index }) }
+    fun setTargetAddress(index: Int, value: String) = updateTarget(index) { it.copy(address = value) }
+    fun setTargetChannel(index: Int, channel: Channel) = updateTarget(index) { it.copy(channel = channel) }
+
+    /** Live answer for the "Try it" box: would THIS rule (as currently edited) forward the sample? */
+    fun testMatches(defaultName: String): Boolean? {
+        val s = _state.value
+        if (s.testSender.isBlank() && s.testBody.isBlank()) return null
+        return evaluator.matches(s.toRule(defaultName).copy(enabled = true), s.testSender, s.testBody)
+    }
+
+    fun save(defaultName: String) {
+        val s = _state.value
+        val rule = s.toRule(defaultName)
+        val error = when {
+            s.hasInvalidRegex -> RuleEditError.INVALID_REGEX
+            rule.targets.isEmpty() -> RuleEditError.NO_TARGET
+            else -> null
         }
-        _uiState.update { it.copy(isSaving = true) }
-        val rule = ForwardingRule(
-            id = state.id,
-            name = state.name.trim(),
-            priority = state.priority,
-            senderPattern = state.senderPattern.takeIf { it.isNotBlank() },
-            keywordPattern = state.keywordPattern.takeIf { it.isNotBlank() },
-            destinationType = state.destinationType.name,
-            destination = state.destination.trim(),
-            isEnabled = state.isEnabled,
-            createdAt = 0L,
-            updatedAt = 0L,
-        )
-        repository.upsert(rule)
-        _uiState.update { it.copy(isSaving = false, isSaved = true) }
+        if (error != null) {
+            _state.update { it.copy(error = error) }
+            return
+        }
+        viewModelScope.launch {
+            repository.upsert(rule.toEntity(base = original))
+            _state.update { it.copy(saved = true, error = null) }
+        }
+    }
+
+    fun clearError() = _state.update { it.copy(error = null) }
+
+    private fun updateGroup(kind: GroupKind, transform: (ConditionGroup) -> ConditionGroup) = _state.update {
+        if (kind == GroupKind.SENDER) it.copy(sender = transform(it.sender)) else it.copy(content = transform(it.content))
+    }
+
+    private fun updateCondition(kind: GroupKind, index: Int, transform: (Condition) -> Condition) = updateGroup(kind) { g ->
+        g.copy(conditions = g.conditions.mapIndexed { i, c -> if (i == index) transform(c) else c })
+    }
+
+    private fun updateTarget(index: Int, transform: (Target) -> Target) = _state.update { s ->
+        s.copy(targets = s.targets.mapIndexed { i, t -> if (i == index) transform(t) else t })
+    }
+
+    companion object {
+        const val ARG_RULE_ID = "ruleId"
     }
 }
