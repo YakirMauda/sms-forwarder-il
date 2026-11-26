@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -49,5 +52,7 @@ fun Pill(text: String, container: Color, content: Color) {
     )
 }
 
-/** Phone numbers, regexes and URLs are always laid out left-to-right, even in Hebrew. */
-val LtrText = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr)
+/** Current text style, forced left-to-right: phone numbers, regexes and URLs stay LTR even in Hebrew. */
+val LtrText: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
