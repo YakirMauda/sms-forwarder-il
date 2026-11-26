@@ -5,8 +5,10 @@
 - **Always reply in Hebrew** (code, file names and technical terms stay in English).
 - **Always explain simply** what each tool/step does and why (Git, branches, PRs, Gradle, Android APIs...). Assume no prior knowledge.
 - He wants to do as little manually as possible: do the work end-to-end (branch, commit, push, PR, merge, tag) and only stop for things that truly need him.
-- He wants credit: commits are authored by him: `git config user.name "Yakir Mauda"` +
-  `git config user.email "167648116+YakirMauda@users.noreply.github.com"` (GitHub noreply, keeps his real email private).
+- He wants credit: commit **author** = him, **committer** = Claude (an environment hook requires committer
+  noreply@anthropic.com so GitHub shows commits as Verified; GitHub credits contributions to the author):
+  `git config author.name "Yakir Mauda"`, `git config author.email "167648116+YakirMauda@users.noreply.github.com"`
+  (GitHub noreply, keeps his real email private), `git config user.name Claude`, `git config user.email noreply@anthropic.com`.
   Merge PRs with **squash** so the commit on main is his.
 
 ## Goal
@@ -38,7 +40,8 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
    - `MessageSender` interface: `SmsMessageSender`, `TelegramSender`, `WebhookSender`.
    - `SimSelector` interface separate from sending (Interface Segregation).
    - `ForwardingHistoryRepository` for logging; use cases depend on interfaces (Dependency Inversion, Hilt).
-6. **Sending:** `SmsManager.divideMessage` + `sendMultipartTextMessage` (Hebrew = UCS-2, 70 chars/part);
+6. **Forwarded text = original SMS body verbatim** (owner's request 2026-11-26): no sender/date header.
+   **Sending:** `SmsManager.divideMessage` + `sendMultipartTextMessage` (Hebrew = UCS-2, 70 chars/part);
    sent/delivery PendingIntents update the Room log (status + error code). Retry failed from History.
 7. **History & Stats tab:** timestamp, sender, snippet, matched rule, target, status, error; stats today/month,
    success rate, failed count; retry button.
@@ -67,10 +70,10 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
 
 ## Roadmap / status
 - [x] Phase 0: import repo, keystore, secrets
-- [~] Phase 1: CI/CD — PR #1 squash-merged. Tag v1.5.0 NOT pushed yet: the cloud sandbox can only push branch
-  `ci/release-pipeline` (tag push = 403), so the owner creates the tag via GitHub web UI (Releases > Draft new release).
-  Then confirm Release + APK appear.
-- [~] Phase 2: strip foreground service / boot / RCS; receiver + goAsync + WorkManager retry (PR open from `ci/release-pipeline`).
+- [x] Phase 1: CI/CD — PR #1 merged; v1.5.0 released (tag created by owner in web UI: the sandbox can only push
+  branch `ci/release-pipeline`, tag push = 403). APK `sms-forwarder-il-v1.5.0.apk` attached, v2 cert SHA-256 verified.
+  Note: v1.5.0 is pre-Phase-2 code (still has the foreground service).
+- [x] Phase 2: strip foreground service / boot / RCS; receiver + goAsync + WorkManager retry (PR #2 merged, not released yet).
   `SmsReceiver` -> `ForwardingProcessor` (send timeout 7s) -> on failure `RetryScheduler` -> `ForwardRetryWorker`
   (HiltWorker, delays from user's `RetryPolicy`). READ_SMS, NotificationListener, AppWhitelist screen removed.
   Leftovers for later phases: unused strings of removed screens; `LoopProtection` still normalizes +33 (Phase 3);
