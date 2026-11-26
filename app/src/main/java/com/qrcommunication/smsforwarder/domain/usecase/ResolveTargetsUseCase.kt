@@ -5,6 +5,7 @@ import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
 import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.domain.rules.Channel
 import com.qrcommunication.smsforwarder.domain.rules.PhoneNumbers
+import com.qrcommunication.smsforwarder.domain.rules.Resolution
 import com.qrcommunication.smsforwarder.domain.rules.ResolvedTarget
 import com.qrcommunication.smsforwarder.domain.rules.RuleEvaluator
 import com.qrcommunication.smsforwarder.domain.rules.Target
@@ -21,13 +22,16 @@ class ResolveTargetsUseCase @Inject constructor(
     private val evaluator: RuleEvaluator,
     private val preferencesManager: PreferencesManager,
 ) {
-    suspend operator fun invoke(sender: String, body: String): List<ResolvedTarget> {
+    suspend operator fun invoke(sender: String, body: String): Resolution {
         val rules = ruleRepository.getEnabledOrdered().map { it.toDomain() }
-        val matched = evaluator.resolveTargets(rules, sender, body)
-        if (matched.isNotEmpty() || !preferencesManager.isDefaultNumberEnabled) return matched
+        val matched = evaluator.resolve(rules, sender, body)
+        // A rule matched (even if its only target was loop-skipped): no catch-all.
+        if (matched.targets.isNotEmpty() || matched.loopSkipped.isNotEmpty()) return matched
+        if (!preferencesManager.isDefaultNumberEnabled) return matched
 
         val fallback = preferencesManager.destinationNumber
-        if (fallback.isBlank() || PhoneNumbers.same(fallback, sender)) return emptyList()
-        return listOf(ResolvedTarget(Target(Channel.SMS, fallback), ruleId = null))
+        if (fallback.isBlank()) return matched
+        val target = ResolvedTarget(Target(Channel.SMS, fallback), ruleId = null)
+        return if (PhoneNumbers.same(fallback, sender)) Resolution(emptyList(), listOf(target)) else Resolution(listOf(target))
     }
 }

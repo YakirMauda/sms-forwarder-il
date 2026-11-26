@@ -30,7 +30,7 @@ class ResolveTargetsUseCaseTest {
         whenever(prefs.isDefaultNumberEnabled).thenReturn(false)
         whenever(prefs.destinationNumber).thenReturn("0501234567")
 
-        assertTrue(useCase("Leumi", "code 1").isEmpty())
+        assertTrue(useCase("Leumi", "code 1").targets.isEmpty())
     }
 
     @Test
@@ -41,7 +41,7 @@ class ResolveTargetsUseCaseTest {
 
         assertEquals(
             listOf(ResolvedTarget(Target(Channel.SMS, "0501234567"), null)),
-            useCase("Hapoalim", "code 1"),
+            useCase("Hapoalim", "code 1").targets,
         )
     }
 
@@ -51,7 +51,7 @@ class ResolveTargetsUseCaseTest {
         whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
         whenever(prefs.destinationNumber).thenReturn("0501234567")
 
-        assertEquals(listOf("0521112233"), useCase("Leumi", "code 1").map { it.target.address })
+        assertEquals(listOf("0521112233"), useCase("Leumi", "code 1").targets.map { it.target.address })
     }
 
     @Test
@@ -60,7 +60,20 @@ class ResolveTargetsUseCaseTest {
         whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
         whenever(prefs.destinationNumber).thenReturn("")
 
-        assertTrue(useCase("Leumi", "code 1").isEmpty())
+        assertTrue(useCase("Leumi", "code 1").targets.isEmpty())
+    }
+
+    @Test
+    fun ruleTargetIsSender_isLoopSkipped_andNoCatchAll() = runTest {
+        // Rule with no sender pattern (matches anyone) whose only target is the sender's own number.
+        whenever(repo.getEnabledOrdered()).thenReturn(listOf(legacyRule(null, "+972521112233")))
+        whenever(prefs.isDefaultNumberEnabled).thenReturn(true)
+        whenever(prefs.destinationNumber).thenReturn("0501234567")
+
+        val result = useCase("052-111-2233", "hi")
+
+        assertTrue(result.targets.isEmpty())
+        assertEquals(listOf("+972521112233"), result.loopSkipped.map { it.target.address })
     }
 
     @Test
@@ -69,7 +82,7 @@ class ResolveTargetsUseCaseTest {
 
         assertEquals(
             listOf(ResolvedTarget(Target(Channel.SMS, "0521112233"), 3L)),
-            useCase("LEUMI", "code 1"),
+            useCase("LEUMI", "code 1").targets,
         )
     }
 }

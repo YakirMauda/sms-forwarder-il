@@ -18,17 +18,25 @@ class RuleEvaluator(private val registry: MatcherRegistry = MatcherRegistry.DEFA
             .sortedByDescending { it.priority }
             .filter { matches(it, sender, body) }
 
-    fun resolveTargets(rules: List<Rule>, sender: String, body: String): List<ResolvedTarget> {
+    fun resolveTargets(rules: List<Rule>, sender: String, body: String): List<ResolvedTarget> =
+        resolve(rules, sender, body).targets
+
+    fun resolve(rules: List<Rule>, sender: String, body: String): Resolution {
         val seen = mutableSetOf<Pair<Channel, String>>()
         val result = mutableListOf<ResolvedTarget>()
+        val loopSkipped = mutableListOf<ResolvedTarget>()
         for (rule in matchingRules(rules, sender, body)) {
             for (target in rule.targets) {
                 if (target.address.isBlank()) continue
-                if (target.channel == Channel.SMS && PhoneNumbers.same(target.address, sender)) continue
-                if (seen.add(target.channel to dedupKey(target))) result += ResolvedTarget(target, rule.id)
+                if (!seen.add(target.channel to dedupKey(target))) continue
+                if (target.channel == Channel.SMS && PhoneNumbers.same(target.address, sender)) {
+                    loopSkipped += ResolvedTarget(target, rule.id)
+                } else {
+                    result += ResolvedTarget(target, rule.id)
+                }
             }
         }
-        return result
+        return Resolution(result, loopSkipped)
     }
 
     fun matches(rule: Rule, sender: String, body: String): Boolean = explain(rule, sender, body).matches

@@ -69,7 +69,7 @@
     <string name="status_sent">נשלח</string>
     <string name="status_delivered">נמסר</string>
     <string name="status_failed">נכשל</string>
-    <string name="status_filtered">סונן</string>
+    <string name="status_filtered">דולג</string>
     <string name="retry_sent">נשלח שוב</string>
     <string name="retry_failed">השליחה החוזרת נכשלה: %1$s</string>
     <string name="settings_language">שפה</string>
@@ -116,4 +116,10 @@
     <string name="test_reason_sender">השולח לא מתאים</string>
     <string name="test_reason_content">השולח מתאים, אבל התוכן לא</string>
     <string name="test_reason_both">גם השולח וגם התוכן לא מתאימים</string>
+    <string name="master_off_warning_title">העברת ההודעות כבויה</string>
+    <string name="master_off_warning_text">יש חוקים פעילים, אבל שום הודעה לא תועבר עד שתפעילו את העברת ההודעות.</string>
+    <string name="action_turn_on">הפעלה</string>
+    <string name="rule_on_master_off">החוק פעיל, אבל העברת ההודעות כבויה</string>
+    <string name="history_reason_loop">דולג: השולח הוא גם היעד (הגנה מלולאה)</string>
+    <string name="test_reason_loop">החוק מתאים, אבל היעד הוא השולח עצמו ולכן ההודעה מדולגת (הגנה מלולאה). בדקו עם מספר שולח אחר.</string>
 </resources>

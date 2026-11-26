@@ -74,7 +74,7 @@
     <string name="status_sent">Sent</string>
     <string name="status_delivered">Delivered</string>
     <string name="status_failed">Failed</string>
-    <string name="status_filtered">Filtered</string>
+    <string name="status_filtered">Skipped</string>
     <string name="retry_sent">Resent</string>
     <string name="retry_failed">Retry failed: %1$s</string>
     <string name="settings_language">Language</string>
@@ -126,4 +126,10 @@
     <string name="test_reason_sender">The sender doesn\'t match</string>
     <string name="test_reason_content">The sender matches, but the content doesn\'t</string>
     <string name="test_reason_both">Neither the sender nor the content match</string>
+    <string name="master_off_warning_title">Forwarding is off</string>
+    <string name="master_off_warning_text">You have active rules, but nothing will be forwarded until you turn forwarding on.</string>
+    <string name="action_turn_on">Turn on</string>
+    <string name="rule_on_master_off">The rule is on, but forwarding is off</string>
+    <string name="history_reason_loop">Skipped: the sender is also the target (loop guard)</string>
+    <string name="test_reason_loop">The rule matches, but the target is the sender itself, so it is skipped (loop guard). Test with a different sender number.</string>
 </resources>

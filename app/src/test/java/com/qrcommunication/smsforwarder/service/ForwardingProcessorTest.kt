@@ -8,6 +8,7 @@ import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.data.repository.SmsRepository
 import com.qrcommunication.smsforwarder.domain.model.IncomingSms
 import com.qrcommunication.smsforwarder.domain.rules.Channel
+import com.qrcommunication.smsforwarder.domain.rules.Resolution
 import com.qrcommunication.smsforwarder.domain.rules.ResolvedTarget
 import com.qrcommunication.smsforwarder.domain.rules.Target
 import com.qrcommunication.smsforwarder.domain.usecase.ResolveTargetsUseCase
@@ -53,7 +54,7 @@ class ForwardingProcessorTest {
         whenever(preferences.receivingSimSlot).thenReturn(-1)
         whenever(preferences.destinationNumber).thenReturn("")
         whenever(smsRepository.insertRecord(any())).thenReturn(42L)
-        whenever(resolveTargets(any(), any())).thenReturn(listOf(me))
+        whenever(resolveTargets(any(), any())).thenReturn(Resolution(listOf(me)))
         whenever(
             notificationRepository.notify(any(), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()),
         ).thenReturn(1L)
@@ -108,7 +109,7 @@ class ForwardingProcessorTest {
     @Test
     fun multipleTargets_eachGetsOwnRecordAndSend() = runTest {
         val mom = ResolvedTarget(Target(Channel.SMS, "0527654321"), ruleId = 7L)
-        whenever(resolveTargets(any(), any())).thenReturn(listOf(me, mom))
+        whenever(resolveTargets(any(), any())).thenReturn(Resolution(listOf(me, mom)))
 
         val outcome = processor.process(sms) as ForwardOutcome.Forwarded
 
@@ -119,10 +120,23 @@ class ForwardingProcessorTest {
 
     @Test
     fun noTargets_skips() = runTest {
-        whenever(resolveTargets(any(), any())).thenReturn(emptyList())
+        whenever(resolveTargets(any(), any())).thenReturn(Resolution(emptyList()))
 
         assertTrue(processor.process(sms) is ForwardOutcome.Skipped)
         verify(smsRepository, never()).insertRecord(any())
+    }
+
+    @Test
+    fun loopSkippedTarget_isLoggedAsFilteredWithReason_andNothingSent() = runTest {
+        whenever(resolveTargets(any(), any())).thenReturn(Resolution(emptyList(), loopSkipped = listOf(me)))
+
+        assertTrue(processor.process(sms) is ForwardOutcome.Skipped)
+
+        val record = argumentCaptor<SmsRecord>()
+        verify(smsRepository).insertRecord(record.capture())
+        assertEquals(SmsStatus.FILTERED.value, record.firstValue.status)
+        assertEquals(ForwardingProcessor.REASON_LOOP, record.firstValue.errorMessage)
+        verify(dispatcher, never()).dispatch(any(), any(), any())
     }
 
     @Test

@@ -57,6 +57,9 @@ class ForwardingProcessor @Inject constructor(
 
         /** Total send budget; must stay well below the ~10s Android gives a `goAsync()` receiver. */
         const val SEND_TIMEOUT_MS = 7_000L
+
+        /** errorMessage of a FILTERED record skipped by the loop guard (History shows a localized text). */
+        const val REASON_LOOP = "loop"
     }
 
     suspend fun process(sms: IncomingSms): ForwardOutcome {
@@ -64,11 +67,14 @@ class ForwardingProcessor @Inject constructor(
         if (!passesSimFilter(sms.simSlot)) return skip("SIM ${sms.simSlot} filtered out")
         if (!deduplicator.shouldProcess(sms.sender, sms.body, sms.timestamp)) return skip("duplicate")
 
-        // The rule engine already drops SMS targets equal to the sender; LoopProtection also
-        // catches a target that is this phone's own SIM number.
-        val targets = resolveTargets(sms.sender, sms.body).filterNot {
+        // Loop guard: the rule engine drops SMS targets equal to the sender; LoopProtection also
+        // catches a target that is this phone's own SIM number. Both are logged as skipped
+        // (status FILTERED, reason "loop") so History shows why nothing was sent.
+        val resolution = resolveTargets(sms.sender, sms.body)
+        val (simLoops, targets) = resolution.targets.partition {
             it.target.channel == Channel.SMS && loopProtection.isLoopDetected(sms.sender, it.target.address)
         }
+        (resolution.loopSkipped + simLoops).forEach { logLoopSkip(sms, it) }
         if (targets.isEmpty()) return skip("no matching rule / target")
 
         val payload = MessagePayload(
@@ -128,6 +134,22 @@ class ForwardingProcessor @Inject constructor(
         if (current == null || current.status == SmsStatus.PENDING.value) {
             smsRepository.updateStatus(recordId, SmsStatus.SENT)
         }
+    }
+
+    private suspend fun logLoopSkip(sms: IncomingSms, skipped: ResolvedTarget) {
+        smsRepository.insertRecord(
+            SmsRecord(
+                sender = sms.sender,
+                content = sms.body,
+                receivedAt = sms.timestamp,
+                status = SmsStatus.FILTERED.value,
+                destination = skipped.target.address,
+                errorMessage = REASON_LOOP,
+                ruleId = skipped.ruleId,
+                channel = skipped.target.channel.name,
+                incomingSimSlot = sms.simSlot,
+            ),
+        )
     }
 
     private fun skip(reason: String): ForwardOutcome {

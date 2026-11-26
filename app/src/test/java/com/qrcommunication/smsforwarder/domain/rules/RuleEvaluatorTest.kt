@@ -149,6 +149,14 @@ class RuleEvaluatorTest {
     }
 
     @Test
+    fun resolve_reportsLoopSkippedTargets() {
+        val mom = Target(Channel.SMS, "0527654321")
+        val result = evaluator.resolve(listOf(rule(targets = listOf(me, mom))), "+972501234567", "x")
+        assertEquals(listOf(mom), result.targets.map { it.target })
+        assertEquals(listOf(me), result.loopSkipped.map { it.target })
+    }
+
+    @Test
     fun loopGuard_doesNotApplyToWebhook() {
         val hook = Target(Channel.WEBHOOK, "https://example.com/h")
         val resolved = evaluator.resolveTargets(listOf(rule(targets = listOf(hook))), "0501234567", "x")

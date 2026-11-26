@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SwitchDefaults
@@ -61,6 +62,8 @@ fun RulesScreen(
     val scope = rememberCoroutineScope()
     val deletedMsg = stringResource(R.string.rule_deleted)
     val undoLabel = stringResource(R.string.action_undo)
+    val ruleOnMasterOffMsg = stringResource(R.string.rule_on_master_off)
+    val turnOnLabel = stringResource(R.string.action_turn_on)
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -98,6 +101,35 @@ fun RulesScreen(
                     }
                 }
             }
+            if (!forwarding && rules.any { it.rule.enabled }) {
+                item {
+                    SectionCard(container = MaterialTheme.colorScheme.errorContainer) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(
+                                Icons.Filled.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.master_off_warning_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                                Text(
+                                    stringResource(R.string.master_off_warning_text),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                            TextButton(onClick = { viewModel.setForwardingEnabled(true) }) {
+                                Text(stringResource(R.string.action_turn_on), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
             if (rules.isEmpty()) {
                 item {
                     Text(
@@ -111,7 +143,15 @@ fun RulesScreen(
             items(rules, key = { it.rule.id }) { item ->
                 RuleCard(
                     item = item,
-                    onToggle = { viewModel.setRuleEnabled(item.rule.id, it) },
+                    onToggle = { enabled ->
+                        viewModel.setRuleEnabled(item.rule.id, enabled)
+                        if (enabled && !forwarding) {
+                            scope.launch {
+                                val result = snackbar.showSnackbar(ruleOnMasterOffMsg, actionLabel = turnOnLabel)
+                                if (result == SnackbarResult.ActionPerformed) viewModel.setForwardingEnabled(true)
+                            }
+                        }
+                    },
                     onEdit = { onEditRule(item.rule.id) },
                     onDelete = {
                         viewModel.delete(item)
