@@ -96,6 +96,11 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    // WorkManager (background retries) + Hilt integration for workers
+    implementation(libs.work.runtime)
+    implementation(libs.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

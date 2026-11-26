@@ -5,6 +5,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.qrcommunication.smsforwarder.ui.components.common.CheckSeverity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -39,11 +40,9 @@ class DiagnosticsRunnerTest {
         // Permissions individuelles
         assertTrue(ids.contains("perm_${Manifest.permission.RECEIVE_SMS}"))
         assertTrue(ids.contains("perm_${Manifest.permission.SEND_SMS}"))
-        assertTrue(ids.contains("perm_${Manifest.permission.READ_SMS}"))
         assertTrue(ids.contains("perm_${Manifest.permission.READ_PHONE_STATE}"))
 
         // Checks supplementaires
-        assertTrue(ids.contains("notification_listener"))
         assertTrue(ids.contains("battery_optimization"))
         assertTrue(ids.contains("network"))
     }
@@ -81,12 +80,10 @@ class DiagnosticsRunnerTest {
     }
 
     @Test
-    fun notificationListener_default_warning() {
-        val checks = runner.runAll()
-        val listener = checks.first { it.id == "notification_listener" }
-        // Robolectric : pas dans enabled_notification_listeners par defaut
-        assertEquals(CheckSeverity.WARNING, listener.severity)
-        assertNotNull(listener.fixIntent)
+    fun runAll_noLongerChecksReadSmsOrNotificationListener() {
+        val ids = runner.runAll().map { it.id }
+        assertFalse(ids.contains("perm_${Manifest.permission.READ_SMS}"))
+        assertFalse(ids.contains("notification_listener"))
     }
 
     @Test

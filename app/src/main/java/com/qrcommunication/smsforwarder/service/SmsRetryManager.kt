@@ -1,25 +1,34 @@
 package com.qrcommunication.smsforwarder.service
 
 import android.util.Log
+import com.qrcommunication.smsforwarder.data.local.entity.DestinationType
 import com.qrcommunication.smsforwarder.data.local.entity.SmsRecord
 import com.qrcommunication.smsforwarder.data.local.entity.SmsStatus
 import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
+import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.data.repository.SmsRepository
-import kotlinx.coroutines.delay
+import com.qrcommunication.smsforwarder.service.sender.DestinationDispatcher
+import com.qrcommunication.smsforwarder.service.sender.MessagePayload
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
+/**
+ * Re-sends one FAILED record to the same destination/channel it originally targeted.
+ * No waiting here: back-off between attempts is handled by WorkManager
+ * ([com.qrcommunication.smsforwarder.work.WorkManagerRetryScheduler]).
+ */
 @Singleton
 class SmsRetryManager @Inject constructor(
     private val smsRepository: SmsRepository,
-    private val smsSender: SmsSender,
-    private val preferencesManager: PreferencesManager
+    private val dispatcher: DestinationDispatcher,
+    private val ruleRepository: ForwardingRuleRepository,
+    private val preferencesManager: PreferencesManager,
 ) {
     companion object {
         private const val TAG = "SmsRetryManager"
         const val MAX_RETRIES = 3
-        private const val BASE_DELAY_MS = 2000L
     }
 
     suspend fun retryFailedSms(record: SmsRecord): Boolean {
@@ -28,40 +37,42 @@ class SmsRetryManager @Inject constructor(
             return false
         }
 
-        val destination = preferencesManager.destinationNumber
-        if (destination.isBlank()) {
-            Log.w(TAG, "No destination configured")
-            return false
-        }
-
-        val delayMs = calculateBackoffDelay(record.retryCount)
-        Log.d(TAG, "Retrying SMS ${record.id}, attempt ${record.retryCount + 1}, delay ${delayMs}ms")
-
-        delay(delayMs)
+        val rule = record.ruleId?.let { ruleRepository.getById(it) }
+        val type = rule?.let { DestinationType.fromValue(it.destinationType) } ?: DestinationType.SMS
+        val payload = MessagePayload(
+            sender = record.sender,
+            content = record.content,
+            receivedAt = record.receivedAt,
+            originalDestination = preferencesManager.destinationNumber.takeIf { it.isNotBlank() },
+        )
 
         return try {
-            val formattedMessage = formatForwardedSms(record.sender, record.receivedAt, record.content)
-            smsSender.sendSms(destination, formattedMessage)
+            dispatcher.dispatch(type, record.destination, payload)
             smsRepository.updateRecord(
                 record.copy(
                     status = SmsStatus.SENT.value,
                     forwardedAt = System.currentTimeMillis(),
                     retryCount = record.retryCount + 1,
-                    errorMessage = null
-                )
+                    errorMessage = null,
+                ),
             )
             preferencesManager.incrementSmsCount()
+            rule?.let { ruleRepository.recordSuccess(it.id) }
             Log.i(TAG, "Retry successful for record ${record.id}")
             true
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Retry failed for record ${record.id}", e)
+            val error = e.message ?: e.javaClass.simpleName
             smsRepository.updateRecord(
                 record.copy(
                     status = SmsStatus.FAILED.value,
                     retryCount = record.retryCount + 1,
-                    errorMessage = e.message
-                )
+                    errorMessage = error,
+                ),
             )
+            rule?.let { ruleRepository.recordFailure(it.id, error) }
             false
         }
     }
@@ -75,17 +86,5 @@ class SmsRetryManager @Inject constructor(
         for (record in failedRecords) {
             retryFailedSms(record)
         }
-    }
-
-    private fun calculateBackoffDelay(retryCount: Int): Long {
-        // Backoff exponentiel: 2s, 4s, 8s (plafonne a 30s)
-        val delay = BASE_DELAY_MS * (1L shl retryCount)
-        return delay.coerceAtMost(30_000L)
-    }
-
-    private fun formatForwardedSms(sender: String, timestamp: Long, content: String): String {
-        val dateFormat = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.FRANCE)
-        val date = dateFormat.format(java.util.Date(timestamp))
-        return "[De: $sender | $date] $content"
     }
 }

@@ -1,6 +1,5 @@
 package com.qrcommunication.smsforwarder.ui.settings
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,9 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cached
 import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SimCard
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
@@ -53,9 +51,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.qrcommunication.smsforwarder.R
 import com.qrcommunication.smsforwarder.ui.components.PhoneNumberField
 import com.qrcommunication.smsforwarder.ui.components.common.SettingsCard
@@ -66,7 +61,6 @@ import kotlin.math.abs
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToFilters: () -> Unit,
-    onNavigateToAppWhitelist: () -> Unit = {},
     onNavigateToRules: () -> Unit = {},
     onNavigateToDiagnostics: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
@@ -75,17 +69,6 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Re-check notification access when returning from system settings
-    LaunchedEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.checkNotificationAccess()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-    }
 
     // Toast confirmation: destination saved
     val destSavedMsg = stringResource(R.string.settings_destination_saved)
@@ -412,167 +395,6 @@ fun SettingsScreen(
                             selected = uiState.selectedSimSlot == 1,
                             onClick = { viewModel.setSimSlot(1) }
                         )
-                    }
-                }
-            }
-
-            // ── Notification access ──
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_notification_access_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_notification_access_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Info,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (uiState.isNotificationAccessEnabled) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.error
-                                }
-                            )
-                            Text(
-                                text = if (uiState.isNotificationAccessEnabled) {
-                                    stringResource(R.string.settings_notification_access_enabled)
-                                } else {
-                                    stringResource(R.string.settings_notification_access_disabled)
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (uiState.isNotificationAccessEnabled) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.error
-                                }
-                            )
-                        }
-                    }
-
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.settings_notification_access_button))
-                    }
-                }
-            }
-
-            // ── Third-party apps ──
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_app_whitelist_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_app_whitelist_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Info,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (uiState.isAppWhitelistEnabled) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                            Text(
-                                text = if (uiState.isAppWhitelistEnabled) {
-                                    stringResource(R.string.settings_app_whitelist_status_active, uiState.appWhitelistCount)
-                                } else {
-                                    stringResource(R.string.settings_app_whitelist_status_inactive)
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (uiState.isAppWhitelistEnabled) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-                    }
-
-                    FilledTonalButton(
-                        onClick = onNavigateToAppWhitelist,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.settings_app_whitelist_manage))
                     }
                 }
             }

@@ -40,14 +40,6 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getInt(KEY_RECEIVING_SIM_SLOT, -1)
         set(value) = prefs.edit().putInt(KEY_RECEIVING_SIM_SLOT, value).apply()
 
-    var isAppWhitelistEnabled: Boolean
-        get() = prefs.getBoolean(KEY_APP_WHITELIST_ENABLED, false)
-        set(value) = prefs.edit().putBoolean(KEY_APP_WHITELIST_ENABLED, value).apply()
-
-    var appWhitelistPackages: Set<String>
-        get() = prefs.getStringSet(KEY_APP_WHITELIST_PACKAGES, emptySet()) ?: emptySet()
-        set(value) = prefs.edit().putStringSet(KEY_APP_WHITELIST_PACKAGES, value).apply()
-
     /** Politique de retry serialisee en 4 cles distinctes (pas de JSON). */
     var retryPolicy: RetryPolicy
         get() = RetryPolicy(
@@ -70,14 +62,6 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getString(KEY_APP_LANGUAGE, "system") ?: "system"
         set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
 
-    fun addAppToWhitelist(packageName: String) {
-        appWhitelistPackages = appWhitelistPackages + packageName
-    }
-
-    fun removeAppFromWhitelist(packageName: String) {
-        appWhitelistPackages = appWhitelistPackages - packageName
-    }
-
     fun incrementSmsCount() {
         smsForwardedCount = smsForwardedCount + 1
     }
@@ -94,8 +78,6 @@ class PreferencesManager @Inject constructor(
         private const val KEY_SMS_COUNT = "sms_forwarded_count"
         private const val KEY_SIM_SLOT = "selected_sim_slot"
         private const val KEY_RECEIVING_SIM_SLOT = "receiving_sim_slot"
-        private const val KEY_APP_WHITELIST_ENABLED = "app_whitelist_enabled"
-        private const val KEY_APP_WHITELIST_PACKAGES = "app_whitelist_packages"
         private const val KEY_RETRY_MAX_ATTEMPTS = "retry_max_attempts"
         private const val KEY_RETRY_INITIAL_DELAY = "retry_initial_delay_ms"
         private const val KEY_RETRY_BACKOFF = "retry_backoff"

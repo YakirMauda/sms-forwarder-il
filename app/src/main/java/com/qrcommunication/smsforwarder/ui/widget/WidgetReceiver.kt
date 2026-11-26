@@ -5,10 +5,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.widget.RemoteViews
 import com.qrcommunication.smsforwarder.R
-import com.qrcommunication.smsforwarder.service.SmsForwardService
 import android.app.PendingIntent
 
 class WidgetReceiver : AppWidgetProvider() {
@@ -95,21 +93,8 @@ class WidgetReceiver : AppWidgetProvider() {
         val isCurrentlyEnabled = prefs.getBoolean(KEY_FORWARDING_ENABLED, false)
         val newEnabled = !isCurrentlyEnabled
 
+        // Just a flag: SmsReceiver checks it on every incoming SMS.
         prefs.edit().putBoolean(KEY_FORWARDING_ENABLED, newEnabled).apply()
-
-        if (newEnabled) {
-            val serviceIntent = Intent(context, SmsForwardService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
-        } else {
-            val serviceIntent = Intent(context, SmsForwardService::class.java).apply {
-                action = SmsForwardService.ACTION_STOP_SERVICE
-            }
-            context.startService(serviceIntent)
-        }
 
         // Refresh all widgets
         updateAllWidgets(context)

@@ -8,7 +8,6 @@ sealed class Screen(val route: String) {
     data object Filter : Screen("filter")
     data object Stats : Screen("stats")
     data object Onboarding : Screen("onboarding")
-    data object AppWhitelist : Screen("app_whitelist")
     data object Rules : Screen("rules")
     data object Diagnostics : Screen("diagnostics")
     data object NotificationCenter : Screen("notification_center")

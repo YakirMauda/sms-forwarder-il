@@ -6,8 +6,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Deduplication des messages captures par plusieurs sources (SmsReceiver, ContentObserver, NotificationListener).
- * Utilise un hash sender+contenu+timestamp (arrondi a 5s) pour identifier les doublons.
+ * Guards against the same SMS broadcast being handled twice (e.g. redelivered by the OS).
+ * Key = sender + body + timestamp, kept for [EXPIRY_MS]. The timestamp matters: two
+ * identical texts received at different times (same bank alert twice) are both forwarded.
  */
 @Singleton
 class MessageDeduplicator @Inject constructor() {
@@ -25,9 +26,9 @@ class MessageDeduplicator @Inject constructor() {
      * Retourne false si c'est un doublon.
      */
     fun shouldProcess(sender: String, content: String, timestampMs: Long): Boolean {
-        cleanup()
-        val hash = generateHash(sender, content, timestampMs)
         val now = System.currentTimeMillis()
+        cleanup(now)
+        val hash = generateHash(sender, content, timestampMs)
 
         val existing = processedMessages.putIfAbsent(hash, now)
         if (existing != null) {
@@ -40,14 +41,11 @@ class MessageDeduplicator @Inject constructor() {
     }
 
     private fun generateHash(sender: String, content: String, timestampMs: Long): String {
-        val raw = "$sender|${content.take(100)}"
-        return raw.hashCode().toString()
+        return "$sender|$timestampMs|${content.hashCode()}"
     }
 
-    private fun cleanup() {
-        if (processedMessages.size > MAX_CACHE_SIZE) {
-            val now = System.currentTimeMillis()
-            processedMessages.entries.removeIf { now - it.value > EXPIRY_MS }
-        }
+    private fun cleanup(now: Long) {
+        processedMessages.entries.removeIf { now - it.value > EXPIRY_MS }
+        if (processedMessages.size > MAX_CACHE_SIZE) processedMessages.clear()
     }
 }

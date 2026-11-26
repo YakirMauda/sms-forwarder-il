@@ -1,7 +1,6 @@
 package com.qrcommunication.smsforwarder.ui.settings
 
 import android.app.Application
-import android.provider.Settings
 import android.telephony.SubscriptionManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,9 +30,6 @@ data class SettingsUiState(
     val isDualSim: Boolean = false,
     val isSaved: Boolean = false,
     val appVersion: String = "1.0.0",
-    val isNotificationAccessEnabled: Boolean = false,
-    val isAppWhitelistEnabled: Boolean = false,
-    val appWhitelistCount: Int = 0,
     val retryPolicy: RetryPolicy = RetryPolicy(),
     val appLanguage: String = "system",
     val languageChanged: Boolean = false,
@@ -51,7 +47,6 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadSettings()
-        checkNotificationAccess()
     }
 
     private fun loadSettings() {
@@ -72,8 +67,6 @@ class SettingsViewModel @Inject constructor(
                 receivingSimSlot = preferencesManager.receivingSimSlot,
                 isDualSim = isDualSim,
                 appVersion = version,
-                isAppWhitelistEnabled = preferencesManager.isAppWhitelistEnabled,
-                appWhitelistCount = preferencesManager.appWhitelistPackages.size,
                 retryPolicy = preferencesManager.retryPolicy,
                 appLanguage = preferencesManager.appLanguage,
             )
@@ -185,21 +178,6 @@ class SettingsViewModel @Inject constructor(
 
     fun clearSavedFlag() {
         _uiState.update { it.copy(isSaved = false) }
-    }
-
-    fun checkNotificationAccess() {
-        val enabledListeners = Settings.Secure.getString(
-            application.contentResolver,
-            "enabled_notification_listeners"
-        )
-        val isEnabled = enabledListeners?.contains(application.packageName) == true
-        _uiState.update {
-            it.copy(
-                isNotificationAccessEnabled = isEnabled,
-                isAppWhitelistEnabled = preferencesManager.isAppWhitelistEnabled,
-                appWhitelistCount = preferencesManager.appWhitelistPackages.size
-            )
-        }
     }
 
     private fun checkDualSim(): Boolean {

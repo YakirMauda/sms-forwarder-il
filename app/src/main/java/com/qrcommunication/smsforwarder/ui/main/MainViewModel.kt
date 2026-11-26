@@ -1,8 +1,6 @@
 package com.qrcommunication.smsforwarder.ui.main
 
 import android.app.Application
-import android.content.Intent
-import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.qrcommunication.smsforwarder.data.local.entity.SmsStatus
@@ -10,7 +8,6 @@ import com.qrcommunication.smsforwarder.data.preferences.PreferencesManager
 import com.qrcommunication.smsforwarder.data.repository.AppNotificationRepository
 import com.qrcommunication.smsforwarder.data.repository.ForwardingRuleRepository
 import com.qrcommunication.smsforwarder.data.repository.SmsRepository
-import com.qrcommunication.smsforwarder.service.SmsForwardService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,8 +95,8 @@ class MainViewModel @Inject constructor(
         val current = _uiState.value
         if (!current.isDestinationConfigured) return
         val newEnabled = !current.isForwardingEnabled
+        // Just a flag: SmsReceiver checks it on every SMS. Nothing runs in the background.
         preferencesManager.isForwardingEnabled = newEnabled
-        if (newEnabled) startForwardingService() else stopForwardingService()
         _uiState.update { it.copy(isForwardingEnabled = newEnabled) }
     }
 
@@ -111,22 +108,6 @@ class MainViewModel @Inject constructor(
             isDestinationConfigured = base.isDestinationConfigured,
         ) }
         loadLast24h()
-    }
-
-    private fun startForwardingService() {
-        val intent = Intent(application, SmsForwardService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            application.startForegroundService(intent)
-        } else {
-            application.startService(intent)
-        }
-    }
-
-    private fun stopForwardingService() {
-        val intent = Intent(application, SmsForwardService::class.java).apply {
-            action = SmsForwardService.ACTION_STOP_SERVICE
-        }
-        application.startService(intent)
     }
 
 }
