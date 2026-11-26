@@ -149,7 +149,7 @@ private fun SummaryLine(label: String, value: AnnotatedString) {
     )
 }
 
-/** "equals ‪Leumi‬ OR contains ‪Discount‬" — values are isolated so numbers stay LTR inside Hebrew. */
+/** "equals Leumi OR contains Discount" — values are isolated so numbers stay LTR inside Hebrew. */
 @Composable
 private fun groupSummary(group: ConditionGroup, anyText: String): AnnotatedString {
     if (group.isEmpty) return AnnotatedString(anyText)
