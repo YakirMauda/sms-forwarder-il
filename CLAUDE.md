@@ -78,12 +78,15 @@ banks, HMOs, government) to his phone number. Sideloaded, built only in the clou
   (HiltWorker, delays from user's `RetryPolicy`). READ_SMS, NotificationListener, AppWhitelist screen removed.
   Leftovers for later phases: unused strings of removed screens; `LoopProtection` still normalizes +33 (Phase 3);
   `SmsRetryManager.MAX_RETRIES` also caps manual retry from History after auto-retries (revisit in Phase 4/5).
-- [~] Phase 3: new rule engine (PR #4). Pure Kotlin in `domain/rules/` (RuleModels, PhoneNumbers, ConditionMatchers +
-  MatcherRegistry, RuleEvaluator, RuleJson). Room v3: `forwarding_rules.sender_group/content_group/targets` JSON columns
-  (null = legacy row, converted by `data/mapper/ForwardingRuleMapper`), `sms_records.channel`. `ResolveTargetsUseCase`:
-  enabled rules exist -> only matching rules' targets (none = not forwarded); no enabled rule -> default number from Settings.
-  Pure domain tests can run locally: kotlinc 2.0.21 + junit/json jars (see git log of PR #4), no Android SDK needed.
-- [ ] Phase 4: multipart sending, status tracking, dual-SIM, channels
+- [x] Phase 3: new rule engine (PR #4 merged). Pure Kotlin in `domain/rules/` (RuleModels, PhoneNumbers, ConditionMatchers +
+  MatcherRegistry, RuleEvaluator, RuleJson). Room v3 JSON columns (null = legacy row, see `data/mapper/ForwardingRuleMapper`).
+  Pure domain tests can run locally: kotlinc 2.0.21 + junit/hamcrest/json jars, no Android SDK needed.
+  **Owner decision:** app is rule-driven. "Default number" is an optional catch-all (pref `isDefaultNumberEnabled`, off
+  by default): unmatched SMS go there only when switched on.
+- [~] Phase 4: multipart sending, status tracking, dual-SIM, channels (PR #5). `MessageSender` per channel (Hilt @IntoSet),
+  `SmsStatusReceiver` -> `SmsStatusHandler` (FAILED + code -> retry; delivered_at), `SimSelector` (-1 default, -2 same SIM,
+  0/1 slot), optional `TelegramSender` (bot token pref). Room v4.
+  Workflow note: only `ci/release-pipeline` can be pushed, so phases go one PR at a time; later work waits locally.
 - [ ] Phase 5: Compose UI (Rules, History & Stats, Settings), onboarding, Hebrew/RTL
 - [ ] Phase 6: install via Obtainium on phone, restricted settings, battery
 - [ ] Phase 7: README credits, regular release cycle
