@@ -76,6 +76,7 @@ class ForwardingProcessor @Inject constructor(
             content = sms.body,
             receivedAt = sms.timestamp,
             originalDestination = preferencesManager.destinationNumber.takeIf { it.isNotBlank() },
+            incomingSimSlot = sms.simSlot,
         )
         val perTargetTimeout = SEND_TIMEOUT_MS / targets.size
         return ForwardOutcome.Forwarded(targets.map { send(sms, it, payload, perTargetTimeout) })
@@ -92,10 +93,13 @@ class ForwardingProcessor @Inject constructor(
                 destination = target.address,
                 ruleId = ruleId,
                 channel = target.channel.name,
+                incomingSimSlot = sms.simSlot,
             ),
         )
         return try {
-            withTimeout(timeoutMs) { dispatcher.dispatch(target.channel, target.address, payload) }
+            withTimeout(timeoutMs) {
+                dispatcher.dispatch(target.channel, target.address, payload.copy(recordId = recordId))
+            }
             smsRepository.updateStatus(recordId, SmsStatus.SENT)
             preferencesManager.incrementSmsCount()
             ruleId?.let { ruleRepository.recordSuccess(it) }

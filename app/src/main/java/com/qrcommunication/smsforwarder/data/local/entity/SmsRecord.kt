@@ -54,4 +54,12 @@ data class SmsRecord(
     /** Channel the message was forwarded on (SMS / TELEGRAM / WEBHOOK), used for retries. */
     @ColumnInfo(name = "channel")
     val channel: String = "SMS",
+
+    /** When the carrier confirmed delivery to the target phone (SMS only), null = not (yet) confirmed. */
+    @ColumnInfo(name = "delivered_at")
+    val deliveredAt: Long? = null,
+
+    /** SIM slot the original SMS arrived on (-1 = unknown); reused on retry for "same SIM". */
+    @ColumnInfo(name = "incoming_sim_slot")
+    val incomingSimSlot: Int = -1,
 )

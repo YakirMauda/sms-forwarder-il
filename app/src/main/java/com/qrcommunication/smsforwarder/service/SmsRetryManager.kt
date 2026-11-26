@@ -43,6 +43,8 @@ class SmsRetryManager @Inject constructor(
             content = record.content,
             receivedAt = record.receivedAt,
             originalDestination = preferencesManager.destinationNumber.takeIf { it.isNotBlank() },
+            recordId = record.id,
+            incomingSimSlot = record.incomingSimSlot,
         )
 
         return try {

@@ -1,6 +1,7 @@
 package com.qrcommunication.smsforwarder.service.sender
 
 import android.util.Log
+import com.qrcommunication.smsforwarder.domain.rules.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -14,7 +15,9 @@ import javax.inject.Singleton
  * Utilise HttpURLConnection (pas de dependance externe).
  */
 @Singleton
-class WebhookSender @Inject constructor() {
+class WebhookSender @Inject constructor() : MessageSender {
+
+    override val channel = Channel.WEBHOOK
 
     companion object {
         private const val TAG = "WebhookSender"
@@ -26,7 +29,8 @@ class WebhookSender @Inject constructor() {
     /**
      * @throws WebhookException si HTTP code >= 400 ou erreur reseau.
      */
-    suspend fun send(url: String, payload: MessagePayload) = withContext(Dispatchers.IO) {
+    override suspend fun send(address: String, payload: MessagePayload): Unit = withContext(Dispatchers.IO) {
+        val url = address
         val body = JSONObject().apply {
             put("sender", payload.sender)
             put("content", payload.content)
